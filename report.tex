@@ -33,8 +33,18 @@ for simple 8-bit music generation through temporal inference techniques. In this
 generation, and present techniques for designing generative Markov models to create derivative musical works.
 
 \section{Related Work}
-Shapiro and Huber created a document using Markov chains for music generation that is easy to understand and makes its source code available on 
-GitHub \cite{shapiro_huber_2021}.
+Yanchenko and Mukherjee explored the use of Hidden Markov Models (HMMs) to compose classical music, finding proficiency in generating consonant harmonies, but 
+lacking melodic progression \cite{yanchenko_2017}. Indeed, the models were found to learn the harmonic hidden states quite well, in some cases leading to overfitting. 
+HMMs have also found use in chorale harmonization, where a given observable melody uses inference to derive hidden harmonies to complement it \cite{allan_2005}. 
+
+Shapiro and Huber's approach to music generation simply uses Markov chains, no hidden states \cite{shapiro_huber_2021}. In their work, the states represent sound 
+objects with attributes such as pitch, octave, and duration. Their results show that human-composed pieces can be closely replicated using the simpler Markov chains. 
+Further, they have attached their implementation in their paper. We will consider this work when constructing our own implementation.
+
+The papers previously mentioned use the MIDI file format to write digital music. This format appears to be the standard for digital music creation \cite{midi_format}. 
+Additionally, successful approaches to melody extraction from MIDI files \cite{ozcan_2005} make assurances that this will be an adequate medium for the music our models 
+will generate. MusicXML is a standard file format for storing sheet music, just as MP3 is for recordings \cite{musicxml_2022}. As both are commonly used standards, we 
+plan to use MusicXML for input data and write our output to MIDI files.
 
 \section{Timeline}
 Text here, probably a figure too. 
@@ -49,7 +59,7 @@ Text
 \section{Resources}
 
 \subsection{Tools}
-Any tools we'll use (e.g. Jupyter Notebooks, MIDI, Python libraries).
+Any tools we'll use (e.g. Jupyter Notebooks, MIDI, MusicXML, Python libraries).
 
 \subsection{Data Sets}
 Data sets we'll use (e.g. 8-bit tracks to train/generate from).
