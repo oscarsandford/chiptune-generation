@@ -37,6 +37,11 @@ Yanchenko and Mukherjee explored the use of Hidden Markov Models (HMMs) to compo
 lacking melodic progression \cite{yanchenko_2017}. Indeed, the models were found to learn the harmonic hidden states quite well, in some cases leading to overfitting. 
 HMMs have also found use in chorale harmonization, where a given observable melody uses inference to derive hidden harmonies to complement it \cite{allan_2005}. 
 
+Walter and Van Der Merwe's methods involve representing the chord duration, chord progression, and rhythm progression by first or higher-order Markov chains, whereas 
+the overlaying melodic arc is represented by a HMM \cite{walter_2011}. This works well to reduce the processing power needed for music generation, but the independent 
+learning of each component leads to less cohesive compositions. Generating music by sampling a trained model seems to be the logical route for our experiements. 
+However, we want to create music that does not only simply replicate the training data, but also creates cohesive pieces in a more natural way. 
+
 Shapiro and Huber's approach to music generation simply uses Markov chains, no hidden states \cite{shapiro_huber_2021}. In their work, the states represent sound 
 objects with attributes such as pitch, octave, and duration. Their results show that human-composed pieces can be closely replicated using the simpler Markov chains. 
 Further, they have attached their implementation in their paper. We will consider this work when constructing our own implementation.
