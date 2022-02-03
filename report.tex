@@ -9,7 +9,7 @@
 % \usepackage{lineno}
 % \linenumbers
 
-\title{Track Extension and Generation using Markov chains}
+\title{Chiptune Extension and Generation using Markov chains}
 
 % Three addresses
 % --------------
@@ -23,14 +23,17 @@
 \maketitle
 
 \begin{abstract}
-Write this last.
+Music generation is a well-studied field. Previous attempts at music generation have succeeded in replicating training tracks using various methods, but failing to 
+create original works that are preferable to their humanly-composed counterparts. In this paper, we show that appropriately designed Markov models are a sufficient 
+enough machinery to both replicate and generate classic 8-bit video game music. 
+\footnote{This abstract will be expounded in time, pending study completion and results organized.}
 \end{abstract}
 
 \section{Introduction}
 Music is typically constructed by humans, for humans. However, machines are becoming more adept at revealing patterns in the way musicians craft their chords. 
-This enables humans to create their own music, and then let the machine take over the task of composer. Our project aims to understand and implement a framework 
-for simple 8-bit music generation through temporal inference techniques. In this paper, we explore previous implementations and existing literature regarding music 
-generation, and present techniques for designing generative Markov models to extend music as well as create derivative musical works.
+This enables humans to create their own music, and then let the machine take over the task of composer. Our project implements models for simple 8-bit music 
+generation using temporal inference techniques. In the following section, we explore previous implementations and existing literature regarding music generation. 
+Later, we will present techniques for designing generative Markov models to extend music as well as create derivative musical works.
 
 \section{Related Work}
 \subsection{Markov Models}
@@ -50,7 +53,7 @@ Further, they have attached their implementation in their paper. We will conside
 Corrêa and Jungling suggest using Markov chains of different orders to predict classical music. By using stochastic models to analyze different classcal songs and styles,
 the computer can even capture subtle and intuitive features such as style of the composer. Although this paper focuses on classcial music and its prediction, the authors 
 stress that its application to other music genres should be straightforward \cite{correa_jungling_small_2020}.
-The only requirement is a MIDI file with a good quality, as it should be used for markov chains can properly estimate the music's pattern.
+The only requirement is a MIDI file with a good quality, as it should be used for Markov chains that can properly estimate the music's pattern.
 
 \subsection{Data Format}
 The papers previously mentioned use the MIDI file format to write digital music. This format appears to be the standard for digital music creation \cite{midi_format}. 
@@ -58,6 +61,14 @@ One of MIDI's drawbacks is that it cannot store vocals \cite{cataltepe_2007}. Th
 compositions. Additionally, successful approaches to melody extraction from MIDI files \cite{ozcan_2005} make assurances that this will be an adequate medium for the 
 music our models will generate. MusicXML is a standard file format for storing sheet music, just as MP3 is for recordings \cite{musicxml_2022}. As both are commonly used 
 standards, we plan to use MusicXML for input data and write our output to MIDI files.
+
+\section{Approach}
+After considering the differences between HMMs and simpler Markov models, we have decided to design our generator as a $k$-order Markov process without hidden states, 
+since these methods have seen success in recent works \cite{shapiro_huber_2021,correa_jungling_small_2020}. As of now, we have two designs in mind. The first approach 
+involves representing a song with a single chain of sound object states, including pitch, octave, duration, and other attributes. An alternative is using $m$ separate 
+$k$-order Markov processes, one for each key on a piano used in the song. It will be prudent to consider extending the order of the processes in this case, in order to 
+capture the musical patterns more clearly. Otherwise, first-order probabilistic transitions will inevitably make the generated notes very random. Extending the process 
+order also hopes to alleviate the generative faults coming from independently trained Markov chains.
 
 \section{Timeline}
 We expect to have 3 milestones for this project:
@@ -79,15 +90,15 @@ MusicXML format, and designing a parser to turn notes into data. Jae and Oscar w
 \section{Resources}
 \subsection{Tools}
 Stacher\footnote{https://stacher.io} is a frontend GUI for YT-DLP, which is a command line downloader that can be installed for converting Youtube videos to MP3 files.
-While YT-DLP works just fine, Stacher makes it very easy to convert YouTube links to various file formats(MP3, WAV, AAC, etc.) and save them on your current device. This is 
-the software we will use to get the songs as MP3 files saved and put into AnthemScore to be converted into XML files.
+While YT-DLP works just fine, Stacher makes it very easy to convert YouTube links to various file formats (MP3, WAV, AAC, etc.) and save them on your current device. This 
+is the software we will use to get the songs as MP3 files saved and put into AnthemScore to be converted into XML files.
 
-AnthemScore\footnote{https://www.lunaverus.com/} is a music transcription software that converts WAV, MP3, and other audio formats into sheet music using an advanced neural 
-network. The sheet music can then be exported to various other formats such as PDF, MIDI, or XML. The main use of this software is to easily obtain XML files that we will 
-use for data in the Markov chains. While AnthemScore is a great tool to aquire relatively true XML files of songs, the artificial intelligence that powers it does occasionally 
-miss notes. What this means for us is that without changing the notes that are detected and placed by the AnthemScore software, it may miss notes or sounds that exist within 
-the original song. Despite this, as long as it is mostly accurate and the majority of notes are in place, it shouldn't affect the overall process of the project. We will avoid 
-songs that don't transform accurately into MusicXML. Preliminary coding will be done in Jupyter Notebooks using Python. 
+AnthemScore\footnote{https://www.lunaverus.com/} is a music transcription software that converts WAV, MP3, and other audio formats into sheet music using an advanced 
+neural network. The sheet music can then be exported to various other formats such as PDF, MIDI, or XML. The main use of this software is to easily obtain XML files that 
+we will use for data in the Markov chains. While AnthemScore is a great tool to aquire relatively true XML files of songs, the artificial intelligence that powers it does 
+occasionally miss notes. What this means for us is that without changing the notes that are detected and placed by the AnthemScore software, it may miss notes or sounds 
+that exist within the original song. Despite this, as long as it is mostly accurate and the majority of notes are in place, it shouldn't affect the overall process of the 
+project. We will avoid songs that don't transform accurately into MusicXML. Preliminary coding will be done in Jupyter Notebooks using Python. 
 
 \subsection{Data Sets}
 We are planning to use mostly music from various classic video games, including Super Mario Brothers \cite{kondo_2009},
