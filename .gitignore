@@ -1,3 +1,7 @@
 report.*
 !report.tex
 !report.pdf
+
+src/envmcc
+**/__pycache__
+**/.ipynb_checkpoints
