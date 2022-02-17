@@ -30,3 +30,11 @@ Install required packages with
 ```
 pip install -r requirements.txt
 ```
+
+## Workflow
+Just an idea on how each Python module affects the workflow. Subject to refactoring if necessary.
+
+1. **mcc_parser**: extract tracks, their notes, and other info such as tempo
+2. **mcc_markov**: model each track with a Markov chain, try to learn to replicate
+3. **mcc_waves**: convert sequences of notes and whole tracks into sound waves
+4. **mcc_builder**: compile tracks and sound waves, as well as other export tasks

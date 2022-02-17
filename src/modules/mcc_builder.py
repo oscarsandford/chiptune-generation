@@ -1,5 +1,6 @@
 # mcc_builder.py
-# Functions to build and compile tracks and notes together.
+# Functions to build and compile list (i.e. waves) together 
+# as well as export audio files.
 
 import numpy as np
 

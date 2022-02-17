@@ -39,6 +39,8 @@ def extract_midi_tracks(mid_tracks:list) -> list:
 	notes_tracks = []
 	for track in mid_tracks:
 		track_notes = []
+		# TODO: It will be worth adding more data to the track. 
+		# For example, the type of instrument that is playing, or a specific tempo.
 		for msg in track:
 			# Only work on messages that describe notes.
 			if msg.type == "note_on" or msg.type == "note_off":

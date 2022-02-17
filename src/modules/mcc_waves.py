@@ -25,6 +25,13 @@ def generate_triangle(pitch:float, nharmonics:int=4, dur:float=1.0, amp:float=1.
 	return amp * (8/(np.pi**2)) * x
 
 
+def generate_square():
+	"""
+	TODO: write a function for square waves and any other waveforms needed for NES/SEGA-type sounds.
+	"""
+	pass
+
+
 def adsr_envelope(dur:float, props:list=[0.1,0.2,0.5], sr:int=44100) -> np.array:
 	"""
 	Creates an ASDR (attack-decay-sustain-release) envelope for a given duration 
