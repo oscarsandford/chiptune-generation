@@ -4,32 +4,35 @@
 import numpy as np
 
 
-def _midi_to_freq(pitch: float) -> float:
+def _midi_to_freq(pitch:float) -> float:
 	"""
 	A simple function to change a MIDI note to a frequency.
 	"""
 	return 440*(2**((pitch-69)/12.0))
 
 
-def generate_triangle(pitch:float, nharmonics:int=4, dur:float=1.0, amp:float=1.0, sr:float=44100) -> np.array:
+def triangle_wave(pitch:float, dur:float=1.0, sr:float=44100) -> np.array:
 	"""
-	Approximate a triangle wave with a given number of harmonics based on 
-	the equation here https://en.wikipedia.org/wiki/Triangle_wave#Harmonics.	
+	Approximate a triangle wave with 4 harmonics based on the equation 
+	here: https://en.wikipedia.org/wiki/Triangle_wave#Harmonics.	
 	"""
 	f0 = _midi_to_freq(pitch)
 	t = np.arange(0, dur, 1.0/sr)
 	x = np.zeros(t.shape[0])
-	for i in range(nharmonics):
+	for i in range(4):
 		n = 2*i + 1
 		x += ((-1)**i)*(n**(-2))*(np.sin(2*np.pi*f0*n*t))
-	return amp * (8/(np.pi**2)) * x
+	return (8/(np.pi**2)) * x
 
 
-def generate_square():
+def square_wave(pitch:float, dur:float=1.0, sr:float=44100) -> np.array:
 	"""
-	TODO: write a function for square waves and any other waveforms needed for NES/SEGA-type sounds.
+	A function for square waves, a typical waveform used for NES/SEGA-type sounds.
+	The equations can be found here: https://en.wikipedia.org/wiki/Square_wave
 	"""
-	pass
+	f = _midi_to_freq(pitch)
+	t = np.arange(0, dur, 1.0/sr)
+	return 2 * (2*np.floor(f*t) - np.floor(2*f*t)) + 1
 
 
 def adsr_envelope(dur:float, props:list=[0.1,0.2,0.5], sr:int=44100) -> np.array:
@@ -83,7 +86,7 @@ def _add_wave(waves: list, wave: list, idx: int):
 	waves[idx:len(wave)] = wave
 
 
-def create_track_wave(track:list, wave_function=generate_triangle, tempo:int=1000, envl:bool=False) -> list:
+def create_track_wave(track:list, wave_function=square_wave, tempo:int=1000, envl:bool=False) -> list:
 	"""
 	Creates a wave for a given track, with the option to use different wave functions and envelope or not.
 
@@ -119,7 +122,7 @@ def create_track_wave(track:list, wave_function=generate_triangle, tempo:int=100
 	return track_waves
 
 
-def create_all_track_waves(tracks:list, wave_function=generate_triangle, tempo:int=1000, envl:bool=False) -> list:
+def create_all_track_waves(tracks:list, wave_function=square_wave, tempo:int=1000, envl:bool=False) -> list:
 	"""
 	Input a list of lists. Create wave for all tracks.
 	"""
