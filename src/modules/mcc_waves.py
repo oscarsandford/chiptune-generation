@@ -4,6 +4,15 @@
 import numpy as np
 
 
+# Stupid thing.
+MIDI_key = {'c1': 24, 'c#1': 25, 'd1': 26, 'd#1': 27, 'e1': 28, 'f1': 29, 'f#1': 30, 'g1': 31, 'g#1': 32, 'a1': 33, 'a#1': 34, 'b1': 35, 
+			'c2': 36, 'c#2': 37, 'd2': 38, 'd#2': 39, 'e2': 40, 'f2': 41, 'f#2': 42, 'g2': 43, 'g#2': 44, 'a2': 45, 'a#2': 46, 'b2': 47, 
+			'c3': 48, 'c#3': 49, 'd3': 50, 'd#3': 51, 'e3': 52, 'f3': 53, 'f#3': 54, 'g3': 55, 'g#3': 56, 'a3': 57, 'a#3': 58, 'b3': 59, 
+			'c4': 60, 'c#4': 61, 'd4': 62, 'd#4': 63, 'e4': 64, 'f4': 65, 'f#4': 66, 'g4': 67, 'g#4': 68, 'a4': 69, 'a#4': 70, 'b4': 71, 
+			'c5': 72, 'c#5': 73, 'd5': 74, 'd#5': 75, 'e5': 76, 'f5': 77, 'f#5': 78, 'g5': 79, 'g#5': 80, 'a5': 81, 'a#5': 82, 'b5': 83, 
+			'c6': 84, 'c#6': 85, 'd6': 86, 'd#6': 87, 'e6': 88, 'f6': 89, 'f#6': 90, 'g6': 91, 'g#6': 92, 'a6': 93, 'a#6': 94, 'b6': 95, 
+			'c7': 96, 'c#7': 97, 'd7': 98, 'd#7': 99, 'e7': 100, 'f7': 101, 'f#7': 102, 'g7': 103, 'g#7': 104, 'a7': 105, 'a#7': 106, 'b7': 107}
+
 def _midi_to_freq(pitch:float) -> float:
 	"""
 	A simple function to change a MIDI note to a frequency.
@@ -11,28 +20,28 @@ def _midi_to_freq(pitch:float) -> float:
 	return 440*(2**((pitch-69)/12.0))
 
 
-def triangle_wave(pitch:float, dur:float=1.0, sr:float=44100) -> np.array:
+def triangle_wave(freq:float, dur:float=1.0, sr:float=44100) -> np.array:
 	"""
 	Approximate a triangle wave with 4 harmonics based on the equation 
 	here: https://en.wikipedia.org/wiki/Triangle_wave#Harmonics.	
 	"""
-	f0 = _midi_to_freq(pitch)
+	# f0 = _midi_to_freq(pitch)
 	t = np.arange(0, dur, 1.0/sr)
 	x = np.zeros(t.shape[0])
 	for i in range(4):
 		n = 2*i + 1
-		x += ((-1)**i)*(n**(-2))*(np.sin(2*np.pi*f0*n*t))
+		x += ((-1)**i)*(n**(-2))*(np.sin(2*np.pi*freq*n*t))
 	return (8/(np.pi**2)) * x
 
 
-def square_wave(pitch:float, dur:float=1.0, sr:float=44100) -> np.array:
+def square_wave(freq:float, dur:float=1.0, sr:float=44100) -> np.array:
 	"""
 	A function for square waves, a typical waveform used for NES/SEGA-type sounds.
 	The equations can be found here: https://en.wikipedia.org/wiki/Square_wave
 	"""
-	f = _midi_to_freq(pitch)
+	# f = _midi_to_freq(pitch)
 	t = np.arange(0, dur, 1.0/sr)
-	return 2 * (2*np.floor(f*t) - np.floor(2*f*t)) + 1
+	return 2 * (2*np.floor(freq*t) - np.floor(2*freq*t)) + 1
 
 
 def adsr_envelope(dur:float, props:list=[0.1,0.2,0.5], sr:int=44100) -> np.array:
@@ -74,6 +83,58 @@ def adsr_envelope(dur:float, props:list=[0.1,0.2,0.5], sr:int=44100) -> np.array
 	
 	return ampl
 
+
+def _split_note(note_st:str) -> tuple:
+	"""
+	Given a RTTTL formatted note, return 
+	a pair: duration and pitch.
+	"""
+	for i, c in enumerate(note_st):
+		if c in "abcdefgp":
+			d, p = note_st[:i], note_st[i:]
+			return 1/4 if len(d) == 0 else 1/int(d), p
+	raise Exception("MCC: Bad note.")
+		
+
+def notes_to_waveform(notes:list, bpm:float, wave_function=square_wave) -> np.array:
+	"""
+	NEW!
+	A new method for turning a string of notes (based on this spec http://merwin.bespin.org/t4a/specs/nokia_rtttl.txt) 
+	into a playable waveform melody. Takes a BPM argument that defines the tempo of the melody.
+
+	based on this:
+	https://flothesof.github.io/gameboy-sounds-in-python.html#A-function-that-parses-the-melody-and-generates-a-sound
+	"""
+	# Most likely a 4/4 measure.
+	measure_len = 4 * 60 / bpm
+	waveform = np.zeros((0,))
+	for note in notes.split(","):
+		duration, pitch = _split_note(note)
+
+		# Dotted note: extends duration by half. Reformat pitch string.
+		if "." in pitch:
+			duration *= 1.5
+			pitch = pitch.replace(".", "")
+		duration *= measure_len
+
+		# Pause (p) indicates a rest, i.e. frequency 0.
+		if "p" in pitch:
+			frequency = 0.
+		else:
+			if pitch[-1] in [str(i) for i in range(1,9)]:
+				frequency = _midi_to_freq(MIDI_key[pitch])
+			else: # Default to 5th octave.
+				frequency = _midi_to_freq(MIDI_key[pitch+"5"])
+		
+		wave = wave_function(frequency, duration)
+		waveform = np.hstack((waveform, wave))
+
+	return waveform
+	
+"""
+!!!
+The functions below work for a deprecated way to create sound waves from notes of a specific format in a track.
+"""
 
 def _add_wave(waves: list, wave: list, idx: int):
 	"""
