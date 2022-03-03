@@ -1,11 +1,12 @@
 # mcc_waves.py
 # Functions to create and manipulate waves, envelopes, and frequencies.
 
+from time import time
 import numpy as np
 
 
 # Stupid thing.
-MIDI_key = {'c1': 24, 'c#1': 25, 'd1': 26, 'd#1': 27, 'e1': 28, 'f1': 29, 'f#1': 30, 'g1': 31, 'g#1': 32, 'a1': 33, 'a#1': 34, 'b1': 35, 
+RTTTL2MIDI = {'c1': 24, 'c#1': 25, 'd1': 26, 'd#1': 27, 'e1': 28, 'f1': 29, 'f#1': 30, 'g1': 31, 'g#1': 32, 'a1': 33, 'a#1': 34, 'b1': 35, 
 			'c2': 36, 'c#2': 37, 'd2': 38, 'd#2': 39, 'e2': 40, 'f2': 41, 'f#2': 42, 'g2': 43, 'g#2': 44, 'a2': 45, 'a#2': 46, 'b2': 47, 
 			'c3': 48, 'c#3': 49, 'd3': 50, 'd#3': 51, 'e3': 52, 'f3': 53, 'f#3': 54, 'g3': 55, 'g#3': 56, 'a3': 57, 'a#3': 58, 'b3': 59, 
 			'c4': 60, 'c#4': 61, 'd4': 62, 'd#4': 63, 'e4': 64, 'f4': 65, 'f#4': 66, 'g4': 67, 'g#4': 68, 'a4': 69, 'a#4': 70, 'b4': 71, 
@@ -44,7 +45,7 @@ def square_wave(freq:float, dur:float=1.0, sr:float=44100) -> np.array:
 	return 2 * (2*np.floor(freq*t) - np.floor(2*freq*t)) + 1
 
 
-def adsr_envelope(dur:float, props:list=[0.1,0.2,0.5], sr:int=44100) -> np.array:
+def adsr_envelope(dur:float, props:list=[0.1,0.3,0.5], sr:int=44100) -> np.array:
 	"""
 	Creates an ASDR (attack-decay-sustain-release) envelope for a given duration 
 	with a sort of fade-in and fade-out. Customize the ASDR via the props param. 
@@ -96,17 +97,22 @@ def _split_note(note_st:str) -> tuple:
 	raise Exception("MCC: Bad note.")
 		
 
-def notes_to_waveform(notes:list, bpm:float, wave_function=square_wave) -> np.array:
+def notes_to_waveform(notes:list, bpm:float, time_signature:int=4, wave_function=square_wave, do_envl:bool=True) -> np.array:
 	"""
 	NEW!
 	A new method for turning a string of notes (based on this spec http://merwin.bespin.org/t4a/specs/nokia_rtttl.txt) 
-	into a playable waveform melody. Takes a BPM argument that defines the tempo of the melody.
+	into a playable waveform melody. 
+	
+	:param: notes, a list of notes in RTTTL.
+	:param: bpm, defines the tempo of the melody. 
+	:param: time_signature, the time signature defaults to 4/4 time. Set as 3 for 3/4, 5 for 5/4, etc.
+	:param: wave_function, the type of waves to generate for these notes.
+	:param: do_envl, flag to make the note sound smoother with ADSR envelope.
 
 	based on this:
 	https://flothesof.github.io/gameboy-sounds-in-python.html#A-function-that-parses-the-melody-and-generates-a-sound
 	"""
-	# Most likely a 4/4 measure.
-	measure_len = 4 * 60 / bpm
+	measure_len = time_signature * 60 / bpm
 	waveform = np.zeros((0,))
 	for note in notes.split(","):
 		duration, pitch = _split_note(note)
@@ -127,6 +133,12 @@ def notes_to_waveform(notes:list, bpm:float, wave_function=square_wave) -> np.ar
 				frequency = _midi_to_freq(MIDI_key[pitch+"5"])
 		
 		wave = wave_function(frequency, duration)
+
+		if do_envl:
+			envl = adsr_envelope(duration)
+			wavelen = min(len(wave), len(envl))
+			wave = wave[:wavelen] * envl[:wavelen]
+		
 		waveform = np.hstack((waveform, wave))
 
 	return waveform
