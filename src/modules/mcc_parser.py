@@ -34,13 +34,13 @@ def extract_midi_info(meta_messages: list) -> list:
 	for msg in meta_messages:
 		if msg.type == "time_signature":
 			info = (msg.type, msg.numerator, msg.denominator)
-            MidiInfo.append(info)
-        if msg.type == "key_signature":
-            info = (msg.type, msg.key)
-            MidiInfo.append(info)
-        if msg.type == 'set_tempo':
-            info = (msg.type, tempo2bpm(msg.tempo), msg.time)
-            MidiInfo.append(info)
+			MidiInfo.append(info)
+		if msg.type == "key_signature":
+			info = (msg.type, msg.key)
+			MidiInfo.append(info)
+		if msg.type == 'set_tempo':
+			info = (msg.type, tempo2bpm(msg.tempo), msg.time)
+			MidiInfo.append(info)
 	return MidiInfo
 
 
