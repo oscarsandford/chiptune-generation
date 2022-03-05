@@ -3,7 +3,7 @@
 # as well as export audio files.
 
 import numpy as np
-
+from scipy.io.wavfile import write
 
 def _min_len_nonzero(lili: list) -> int:
 	"""
@@ -33,3 +33,11 @@ def combine_tracks(tracks: list, truncate:bool=True) -> list:
 	for t in tracks:
 		combined += t
 	return combined
+
+def export_to_wav(track: list, srate: int, name):
+	"""
+	Input a list of track (number list), sampling rate and the name of the file.
+	Save the input as .wav file.
+	"""
+	assert len(track) > 0
+	write(name + '.wav', srate, track.astype(np.uint8))

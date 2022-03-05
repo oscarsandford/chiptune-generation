@@ -3,3 +3,4 @@ matplotlib
 ipython
 notebook
 mido
+scipy
