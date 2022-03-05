@@ -40,4 +40,4 @@ def export_to_wav(track: list, srate: int, name):
 	Save the input as .wav file.
 	"""
 	assert len(track) > 0
-	write('../results/' + name + '.wav', srate, track.astype(np.uint8))
+	write('../out/' + name + '.wav', srate, track.astype(np.uint8))
