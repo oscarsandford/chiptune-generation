@@ -4,30 +4,45 @@
 
 import numpy as np
 
-"""
-TODO: this class needs work. A bit more to the interface to make it friendlier 
-for RTTTL format. Some comments can be more specific and code cleanier.
-
-Proof of concept so far.
-"""
-
 
 class MarkovModel:
-	def __init__(self, transmat:np.array=None, states:set=None):
+	def __init__(self, states:set=None, transmat=None):
+		"""
+		A class for constructing first-order Markov models.
+		
+		Optional arguments on initialization allow for immediate model construction given 
+		a set of states with length N and a NxN transition matrix array.
+		
+		>>> mm = MarkovModel(states=["S", "C"], transmat=np.array([[0.7, 0.3],[0.2, 0.8]]))
+
+		However, the model can be initialized without these and manually 
+		trained by example using the fit() method.
+		
+		>>> mm = MarkovModel()
+		>>> mm.fit(["S", "S", "C", "S", "C"])
+		
+		It is important to note that the states can be any hashable type that can be put 
+		into a set, not just strings.
+		"""
 		self.states = states
 		self.transmat = transmat
-		# [tmp] Transition counts used internally and for debugging with repr.
-		self._transcounts = {}
-		# Define transmat indices for future lookups if model provided.
-		self._transmat_idxs = {}
+
 		if not(transmat is None or states is None):
+			assert len(transmat.shape) == 2 and transmat.shape[0] == transmat.shape[1], "MCC: Transmat of inadequate shape."
+			assert len(states) == transmat.shape[0], "MCC: Transmat row dimension does not match state set cardinality."
+			# Assure that the set of states is a set of unique elements in the case a list is passed by accident.
+			self.states = set(states)
+			# Define transmat indices for future state-index lookups if model provided.
 			self._transmat_idxs = dict((s,i) for i,s in enumerate(states))
+		else:
+			# Otherwise, we will construct this during training.
+			self._transmat_idxs = {}
 
 
 	def fit(self, event:list):
 		"""
-		Create a model by fitting a given event (i.e. a ordered list of 
-		states). Devise transmat based on state transitions.
+		Create a model by fitting a given event as a ordered list 
+		of states. Devise transmat based on state transitions.
 		"""
 		self.states = set(event)
 		self.transmat = np.zeros((len(self.states),len(self.states)))
@@ -52,13 +67,10 @@ class MarkovModel:
 				if (s,q) in transcounts:
 					self.transmat[row][col] = transcounts[(s,q)]
 
-			# Sum row, then divide each element by the sum to get percents.
+			# Sum row, then divide each element by the sum to get probabilities.
 			rowsum = sum(self.transmat[row])
 			for i in range(len(self.transmat[row])):
 				self.transmat[row][i] /= rowsum
-
-		# [tmp] Transition counts used internally and for debugging with repr.
-		self._transcounts = transcounts
 
 
 	def predict(self, samples:int, state=None) -> list:
@@ -78,7 +90,7 @@ class MarkovModel:
 			# to other states on the respective row of the transition matrix.
 			# We index the first element of whatever the heck np.random.choice returns 
 			# because for some reason it is an array.
-			state = np.random.choice(list(self.states), 1, p=list(self.transmat[self._transmat_idxs[state]]))[0]
+			state = np.random.choice(list(self.states), 1, p=self.transmat[self._transmat_idxs[state]])[0]
 			predictions.append(state)
 		
 		return predictions
@@ -86,5 +98,4 @@ class MarkovModel:
 
 	def __repr__(self) -> str:
 		return "States:\n" + str(self.states) + \
-		"\nTransition matrix:\n" + str(self.transmat) + "\n-------" + \
-		"\nTransition counts:\n" + str(self._transcounts)
+		"\nTransition matrix:\n" + str(self.transmat)
