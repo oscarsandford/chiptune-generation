@@ -17,8 +17,6 @@ def _min_len_nonzero(lili: list) -> int:
 	return minlen
 
 
-# Given a list of tracks an an option to truncate them, 
-# returns a list of each list added element-wise.
 def combine_tracks(tracks: list, truncate:bool=True) -> list:
 	"""
 	Input a list of lists (tracks). Combine each track by element-wise adding each list. 
@@ -33,6 +31,7 @@ def combine_tracks(tracks: list, truncate:bool=True) -> list:
 	for t in tracks:
 		combined += t
 	return combined
+
 
 def export_to_wav(track: list, srate: int, name):
 	"""

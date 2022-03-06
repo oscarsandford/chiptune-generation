@@ -1,8 +1,7 @@
 # mcc_parser.py
 # Functions to parse Midi files.
 
-from mido import MidiFile
-from mido import tempo2bpm
+from mido import MidiFile, tempo2bpm
 import midi_numbers as Instrument
 
 MIDI2RTTTL = {

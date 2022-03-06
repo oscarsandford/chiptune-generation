@@ -128,9 +128,9 @@ def notes_to_waveform(notes:list, bpm:float, time_signature:int=4, wave_function
 			frequency = 0.
 		else:
 			if pitch[-1] in [str(i) for i in range(1,9)]:
-				frequency = _midi_to_freq(MIDI_key[pitch])
+				frequency = _midi_to_freq(RTTTL2MIDI[pitch])
 			else: # Default to 5th octave.
-				frequency = _midi_to_freq(MIDI_key[pitch+"5"])
+				frequency = _midi_to_freq(RTTTL2MIDI[pitch+"5"])
 		
 		wave = wave_function(frequency, duration)
 
