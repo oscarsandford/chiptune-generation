@@ -4,12 +4,17 @@
 
 import numpy as np
 
+"""
+TODO: extend MarkovModel class to allow modelling of higher-order Markov processes.
+This should lead to better results in pattern prediction.
+"""
+
 
 class MarkovModel:
-	def __init__(self, states:set=None, transmat=None):
+	def __init__(self, states:set=None, transmat=None, order:int=1):
 		"""
 		A class for constructing first-order Markov models.
-		
+				
 		Optional arguments on initialization allow for immediate model construction given 
 		a set of states with length N and a NxN transition matrix array.
 		
