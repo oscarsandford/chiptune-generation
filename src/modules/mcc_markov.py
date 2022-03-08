@@ -11,30 +11,45 @@ This should lead to better results in pattern prediction.
 
 
 class MarkovModel:
-	def __init__(self, states:set=None, transmat=None, order:int=1):
+	def __init__(self, states:set=None, transmat=None, order:int=1, epsilon:float=0.0):
 		"""
 		A class for constructing first-order Markov models.
 				
-		Optional arguments on initialization allow for immediate model construction given 
-		a set of states with length N and a NxN transition matrix array.
+		The first two optional arguments on initialization allow for immediate model construction 
+		given a set of states with length N and a NxN transition matrix array.
 		
 		>>> mm = MarkovModel(states=["S", "C"], transmat=np.array([[0.7, 0.3],[0.2, 0.8]]))
 
 		However, the model can be initialized without these and manually 
-		trained by example using the fit() method.
+		trained by examples using the fit() method.
 		
 		>>> mm = MarkovModel()
 		>>> mm.fit(["S", "S", "C", "S", "C"])
 		
 		It is important to note that the states can be any hashable type that can be put 
 		into a set, not just strings.
+
+		The `order` parameter can be set to increase the number of previous states that are 
+		considered when predicting the next state. This will make the transition matrix more 
+		complex as a result. Use fit() to build the model for higher-order processes.
+
+		The `epsilon` parameter can be set on the range [0.0, 1.0] in order to bias a greedy 
+		decision making choice in prediction. 
+			If epsilon=1.0, the most probable transition will always be chosen. Careful, as this 
+				can lead to self-loops.
+			If epsilon=0.0 (by default), the transition probabilities will be weighted accordingly. 
+			If epsilon=0.5, there will be a 50% chance of taking the most probable action, and a 
+				50% chance of making a weighted choice between the other actions.
 		"""
 		self.states = states
 		self.transmat = transmat
+		self.order = order
+		self.epsilon = epsilon
 
 		if not(transmat is None or states is None):
-			assert len(transmat.shape) == 2 and transmat.shape[0] == transmat.shape[1], "MCC: Transmat of inadequate shape."
-			assert len(states) == transmat.shape[0], "MCC: Transmat row dimension does not match state set cardinality."
+			assert order == 1, "MCC: higher-order model should not be initialized with transmat."
+			assert len(transmat.shape) == 2 and transmat.shape[0] == transmat.shape[1], "MCC: transmat of inadequate shape."
+			assert len(states) == transmat.shape[0], "MCC: transmat row dimension does not match state set cardinality."
 			# Assure that the set of states is a set of unique elements in the case a list is passed by accident.
 			self.states = set(states)
 			# Define transmat indices for future state-index lookups if model provided.
@@ -42,6 +57,8 @@ class MarkovModel:
 		else:
 			# Otherwise, we will construct this during training.
 			self._transmat_idxs = {}
+
+		assert 0 <= epsilon <= 1.0, "MCC: epsilon must be in range [0.0, 1.0]."
 
 
 	def fit(self, event:list):
@@ -88,14 +105,21 @@ class MarkovModel:
 			# We have to convert it to a string because apparently numpy 
 			# strings are different and can't index dictionaries. Pain.
 			state = str(np.random.choice(list(self.states)))
+		else:
+			assert state in self.states, "MCC: Invalid provided state."
 
 		predictions = []
 		for _ in range(samples):
-			# Choose one random state from the set of states given the transition probabilities 
-			# to other states on the respective row of the transition matrix.
-			# We index the first element of whatever the heck np.random.choice returns 
-			# because for some reason it is an array.
-			state = np.random.choice(list(self.states), 1, p=self.transmat[self._transmat_idxs[state]])[0]
+			if np.random.random() < self.epsilon:
+				# With epsilon chance, we choose the most probable next state.
+				# If epsilon=0.0, as by default, this never happens.
+				state = list(self.states)[np.argmax(self.transmat[self._transmat_idxs[state]])]
+			else:
+				# Choose one state from the set of states given the transition probabilities 
+				# to other states on the respective row of the transition matrix.
+				# We index the first element of whatever the heck np.random.choice returns 
+				# because for some reason it is an array.
+				state = np.random.choice(list(self.states), 1, p=self.transmat[self._transmat_idxs[state]])[0]
 			predictions.append(state)
 		
 		return predictions
