@@ -207,7 +207,7 @@ class KMarkov():
 		# Grab a random set of k consecutive states that will definitely have a next state.
 		preds = str(np.random.choice(list(self.TP.keys()))).split(",")
 
-		for _ in range(samples):
+		for i in range(samples):
 
 			# Predict the next state given the current predictions.
 			# If we find at least one exact match, we choose the next state 
@@ -229,21 +229,37 @@ class KMarkov():
 
 			# Only consider the k most recent states visited.
 			priors = ",".join(preds[-self.k:])
-			# print("Init priors:", priors)
+			# print(i, " init priors:", priors)
 
 			while not priors in self.TP:
+				priors_list = priors.split(",")
+				
 				# Reduce from beginning.
-				priors = ",".join(priors.split(",")[1:])
-				# print(" reduced priors:", priors)
+				if len(priors_list[1:]) > 0:
+					priors = ",".join(priors_list[1:])
+				
+				# No more priors? Then take the last 
+				# state and find the first (TODO: or random?)
+				# set of priors in the transition probability 
+				# lookup and set those as the priors.
+				else:
+					priors = ",".join(priors_list)
+					for k in self.TP:
+						if k[-len(priors):] == priors:
+							priors = k
+							break
+
+				# print("  reduced priors:", priors)
 
 			# print("end priors:", priors)
 			# Now TP is safe to access. Probabilistically decided which next 
 			# state to return.
-			# print("keys: ", list(self.TP[priors].keys()))
-			# print("vals: ", list(self.TP[priors].values()))
+			# print(" keys: ", list(self.TP[priors].keys()))
+			# print(" vals: ", list(self.TP[priors].values()))
 
 			next = str(np.random.choice(list(self.TP[priors].keys()), p=list(self.TP[priors].values())))
-			# print("next:", next)
+			# print(" next:", next)
+			# print("-"*20)
 
 			preds.append(next)
 		
