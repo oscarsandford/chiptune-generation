@@ -4,16 +4,8 @@
 
 import numpy as np
 
-"""
-TODO: 
 
-Clean up KMarkov, and MarkovModel in terms of code and documentation.
-
-KMarkov is still rudimentary, but seems to outclass MarkovModel off the bat.
-However, it is much slower. Keep both around just in case.
-"""
-
-class MarkovModel:
+class SimpleMarkov:
 	def __init__(self, states:set=None, transmat=None, epsilon:float=0.0):
 		"""
 		A class for constructing first-order Markov models.
@@ -21,12 +13,12 @@ class MarkovModel:
 		The first two optional arguments on initialization allow for immediate model construction 
 		given a set of states with length N and a NxN transition matrix array.
 		
-		>>> mm = MarkovModel(states=["S", "C"], transmat=np.array([[0.7, 0.3],[0.2, 0.8]]))
+		>>> mm = SimpleMarkov(states=["S", "C"], transmat=np.array([[0.7, 0.3],[0.2, 0.8]]))
 
 		However, the model can be initialized without these and manually 
 		trained by examples using the fit() method.
 		
-		>>> mm = MarkovModel()
+		>>> mm = SimpleMarkov()
 		>>> mm.fit(["S", "S", "C", "S", "C"])
 		
 		It is important to note that the states can be any hashable type that can be put 
@@ -106,7 +98,7 @@ class MarkovModel:
 		Generate a given number of samples from the model. You 
 		may pass an initial state to influence the generation.
 		"""
-		assert not(self.states is None or self.transmat is None), "MCC: cannot predict without model."
+		assert not(self.states is None or self.transmat is None), "MCC: Cannot predict without model."
 		if not state:
 			# We have to convert it to a string because apparently numpy 
 			# strings are different and can't index dictionaries. Pain.
@@ -139,26 +131,66 @@ class MarkovModel:
 
 
 class KMarkov():
-	def __init__(self, order:int, states:set=None):
+	def __init__(self, k:int):
 		"""
-		The `order` parameter is set to increase the number of previous states that are 
-		considered when predicting the next state. This will make the transition matrix more 
-		complex as a result. Use fit() to build the model for higher-order processes.
+		A class for fitting and sampling k-order Markov models where k is the 
+		number of previous states that the next state is dependent on. For example, 
+		if k=1, we only consider the previous state when predicting the next state. 
+
+		If k=5, learning the model becomes more complicated than simply mapping 
+		a single state to a set of possible next states and their associated 
+		probabilities. 
+		
+		The set of previous states (of size k) are called priors. The transition probabilities 
+		(TP) table creates keys out of these priors, and under these priors we store another 
+		table that maps the possible next states (given the priors) to their associated 
+		probabilities. This makes TP prior and then next state probability lookups efficient 
+		and flexibility as opposed to a multi-dimensional array structure. 
+		
+		More details on the fitment and prediction algorithms can be found in the descriptions 
+		of their associated methods.
+		
+		----
+
+		Note that the model itself cannot be constructed in initialization. 
+		That is, you cannot pass in a TP table and define your own states on construction.
+
+		Use fit() to build the model for k-order processes. We can fit() an event to 
+		a KMarkov object if the size of the event is greater than k. 
+		Use predict() to generate a given number of samples, once the model is fitted. 
+
+		The following example shows how this class works to generate musical notes in RTTTL format:
+
+		>>> mm = KMarkov(3)
+		>>> mm.fit("16e6,16e6,32p,8e6,16c6,8e6,8g6,8p,8g,8p,8c6")
+		>>> mm.predict(15)
+		['8p', '16g6', '16f#6', '16f6', '16d#6', '16p', '16e6', '16p', '16g#', 
+		'16a', '16c6', '16p', '16a', '16c6', '16d6', '8p', '16g6', '16f#6']
+		
+		Note that issues with predict() can occur when the order k of the model is too 
+		high, the number of examples fit()'d is too small, and the number of samples 
+		passed to predict() is too high. 
+
+		A good heuristic is to provide as much data to fit() as possible. For this reason, SimpleMarkov 
+		is current a safer model to use, but is far less configurable and also less accurate.
 		"""
-		self.k = order
+		self.k = k
 		# Transition probabilities are stored in a dictionary for more efficient and flexible storage.
-		# The format is 
-		# TP[string of prior states] = (next state, probability to do this transition to next state)
+		# The format is: 
+		# TP[`string of prior states`] = 
+		# 	{`next state` : `probability to do this transition to next state`}
 		self.TP = {}
-		if not states is None:
-			self.states = list(set(states))
 
 
 	def fit(self, event:list or str):
 		"""
-		Do fitment.
+		Do fitment. You can pass a command-separated string of states, like in RTTTL format, or as a list. 
 
-		TODO: this docstring needs more work. Elaborate on the workings.
+		Walk through the event, creating keys for TP with k consecutive states ("priors") followed by its 
+		subsequent state ("next"). After combing through the event, return to the lookup table of priors 
+		and replace the occurrence counts with probabilities.
+
+		The fit() method is linear in the order of `len(event) - k`.
 		"""
 		if type(event) is str:
 			assert "," in event, "MCC: Separate states in string representation with commas."
@@ -192,44 +224,35 @@ class KMarkov():
 			for next in self.TP[priors]:
 				self.TP[priors][next] /= csum
 
-		# for p in self.TP:
-		# 	print(p ,"-->" , self.TP[p])
 
-
-	def predict(self, samples:int, init_states=None) -> list:
+	def predict(self, samples:int, DEBUG_LVL:int=0) -> list:
 		"""
 		Generate a given number of samples from the model.
 
-		TODO: this docstring needs work. Elaborate on the why and how.
+		The set of predictions is initialized through a random choice of priors. 
+		One could allow passing a set of states to initialize predictions on. (TODO)
+		
+		In order to predict a single next state, make it so that the set of priors (or a reducible suffix) can 
+		be found in the TP lookup. 
+		
+		If yes, great. Probabilistically choose one of the prior's possible next states.
+		
+		If not, reduce the priors by removing one prior state from the front. Check again, but instead of 
+		checking for an exact match, check if the reduced priors are a suffix of another key. If we find 
+		one such inexact match, set the priors to the full priors that were matched by the reduced priors. 
+		They will be returned on the next run of the loop.
+		
+		If reduction goes to the last prior, randomly chose a sequence of priors that end in the remaining state. 
 		"""
-		assert not(self.states is None or self.TP is None), "MCC: cannot predict without model."
-
+		assert not self.states is None, "MCC: Cannot predict without model. Remember to fit() first."
 		# Grab a random set of k consecutive states that will definitely have a next state.
 		preds = str(np.random.choice(list(self.TP.keys()))).split(",")
 
 		for i in range(samples):
-
-			# Predict the next state given the current predictions.
-			# If we find at least one exact match, we choose the next state 
-			# probabilistically, depending on the probability distribution 
-			# among the possible next states.
-			# If we don't find an exact match, look for the next shortest 
-			# match, starting by reducing the size from the start.
-			# i.e.
-			# predictions[-o:] = [c,d] (last o elements we predict with)
-			# ----
-			# don't match at all: e.g. [a,c,d,b], [c,d,a], ...
-			# ----
-			# prev:[a,b,c,d] -> next:[e]
-			# reduce
-			# prev:[b,c,d] -> next:[e]
-			# reduce again
-			# prev:[c,d] -> next:[e]
-			# => next state is [e]
-
 			# Only consider the k most recent states visited.
 			priors = ",".join(preds[-self.k:])
-			# print(i, " init priors:", priors)
+			if DEBUG_LVL > 0:
+				print(i, " init priors:", priors)
 
 			while not priors in self.TP:
 				priors_list = priors.split(",")
@@ -237,29 +260,33 @@ class KMarkov():
 				# Reduce from beginning.
 				if len(priors_list[1:]) > 0:
 					priors = ",".join(priors_list[1:])
-				
-				# No more priors? Then take the last 
-				# state and find the first (TODO: or random?)
-				# set of priors in the transition probability 
-				# lookup and set those as the priors.
-				else:
-					priors = ",".join(priors_list)
-					for k in self.TP:
-						if k[-len(priors):] == priors:
-							priors = k
+					for ps in self.TP:
+						if ps[-len(priors):] == priors:
+							priors = ps[-len(priors):]
 							break
+				
+				# No more states left to reduce? Then take that last state 
+				# and randomly choose a set of priors that ends in that state
+				# of all the priors that end in this state. 
+				else:
+					last_state = ",".join(priors_list)
+					possible_priors = [k for k in self.TP if k[-len(last_state):] == last_state]
+					priors = str(np.random.choice(possible_priors))
 
-				# print("  reduced priors:", priors)
+				if DEBUG_LVL > 0:
+					print("  reduced priors:", priors)
 
-			# print("end priors:", priors)
-			# Now TP is safe to access. Probabilistically decided which next 
-			# state to return.
-			# print(" keys: ", list(self.TP[priors].keys()))
-			# print(" vals: ", list(self.TP[priors].values()))
+			if DEBUG_LVL > 1:
+				print(" end priors:", priors)
+				print(" keys: ", list(self.TP[priors].keys()))
+				print(" vals: ", list(self.TP[priors].values()))
 
+			# Now TP is safe to access. Probabilistically decided which next state to return.
 			next = str(np.random.choice(list(self.TP[priors].keys()), p=list(self.TP[priors].values())))
-			# print(" next:", next)
-			# print("-"*20)
+
+			if DEBUG_LVL > 0:
+				print(" next:", next)
+				print("-"*20)
 
 			preds.append(next)
 		
