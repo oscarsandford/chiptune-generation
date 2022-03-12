@@ -85,3 +85,21 @@ def extract_midi_tracks(mid_tracks:list) -> list:
 		if len(track_notes) > 0:
 			notes_tracks.append(track_notes)
 	return notes_tracks
+
+def midi_to_rtttl(midi_tuple_list: list) -> str:
+	"""
+	Input ONE element of the output of extract_midi_tracks function. i.e. just one list should be the input
+	It return RTTTL string of the midi note list
+	"""
+
+	rtttlList = ""
+
+	for tuple in midi_tuple_list:
+		rtttl_note = MIDI2RTTTL.get(tuple[0])
+
+		# only adding the RTTTL note to the list if conversion was successful
+		if rtttl_note:
+			rtttlList = rtttlList + "," + rtttl_note
+	
+	rtttlList = rtttlList[1:]	# removing the first comma
+	return rtttlList
