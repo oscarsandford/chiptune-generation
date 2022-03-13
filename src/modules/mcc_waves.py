@@ -1,7 +1,6 @@
 # mcc_waves.py
 # Functions to create and manipulate waves, envelopes, and frequencies.
 
-from time import time
 import numpy as np
 
 
@@ -94,7 +93,7 @@ def _split_note(note_st:str) -> tuple:
 		if c in "abcdefgp":
 			d, p = note_st[:i], note_st[i:]
 			return 1/4 if len(d) == 0 else 1/int(d), p
-	raise Exception("MCC: Bad note.")
+	raise Exception(f"MCC: {note_st} was a bad note.")
 		
 
 def notes_to_waveform(notes:list, bpm:float, time_signature:int=4, wave_function=square_wave, do_envl:bool=True) -> np.array:

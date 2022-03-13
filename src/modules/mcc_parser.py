@@ -2,7 +2,6 @@
 # Functions to parse Midi files.
 
 from mido import MidiFile, tempo2bpm
-import midi_numbers as Instrument
 
 MIDI2RTTTL = {
 	24: 'c1', 25: 'c#1', 26: 'd1', 27: 'd#1', 28: 'e1', 29: 'f1', 30: 'f#1', 31: 'g1', 32: 'g#1', 33: 'a1', 
@@ -16,16 +15,48 @@ MIDI2RTTTL = {
 	103: 'g7', 104: 'g#7', 105: 'a7', 106: 'a#7', 107: 'b7'
 }
 
+INSTRUMENTS = [
+	'Acoustic Grand Piano','Bright Acoustic Piano','Electric Grand Piano','Honky-tonk Piano','Electric Piano 1','Electric Piano 2','Harpsichord',
+	'Clavi','Celesta','Glockenspiel','Music Box','Vibraphone','Marimba','Xylophone','Tubular Bells','Dulcimer','Drawbar Organ','Percussive Organ',
+	'Rock Organ','Church Organ','Reed Organ','Accordion','Harmonica','Tango Accordion','Acoustic Guitar (nylon)','Acoustic Guitar (steel)',
+	'Electric Guitar (jazz)','Electric Guitar (clean)','Electric Guitar (muted)','Overdriven Guitar','Distortion Guitar','Guitar harmonics',
+	'Acoustic Bass','Electric Bass (finger)','Electric Bass (pick)','Fretless Bass','Slap Bass 1','Slap Bass 2','Synth Bass 1','Synth Bass 2',
+	'Violin','Viola','Cello','Contrabass','Tremolo Strings','Pizzicato Strings','Orchestral Harp','Timpani','String Ensemble 1','String Ensemble 2',
+	'SynthStrings 1','SynthStrings 2','Choir Aahs','Voice Oohs','Synth Voice','Orchestra Hit','Trumpet','Trombone','Tuba','Muted Trumpet','French Horn',
+	'Brass Section','SynthBrass 1','SynthBrass 2','Soprano Sax','Alto Sax','Tenor Sax','Baritone Sax','Oboe','English Horn','Bassoon','Clarinet','Piccolo',
+	'Flute','Recorder','Pan Flute','Blown Bottle','Shakuhachi','Whistle','Ocarina','Lead 1 (square)','Lead 2 (sawtooth)','Lead 3 (calliope)','Lead 4 (chiff)',
+	'Lead 5 (charang)','Lead 6 (voice)','Lead 7 (fifths)','Lead 8 (bass + lead)','Pad 1 (new age)','Pad 2 (warm)','Pad 3 (polysynth)','Pad 4 (choir)',
+	'Pad 5 (bowed)','Pad 6 (metallic)','Pad 7 (halo)','Pad 8 (sweep)','FX 1 (rain)','FX 2 (soundtrack)','FX 3 (crystal)','FX 4 (atmosphere)','FX 5 (brightness)',
+	'FX 6 (goblins)','FX 7 (echoes)','FX 8 (sci-fi)','Sitar','Banjo','Shamisen','Koto','Kalimba','Bag pipe','Fiddle','Shanai','Tinkle Bell','Agogo','Steel Drums',
+	'Woodblock','Taiko Drum','Melodic Tom','Synth Drum','Reverse Cymbal','Guitar Fret Noise','Breath Noise','Seashore','Bird Tweet','Telephone Ring','Helicopter',
+	'Applause','Gunshot'
+]
+
+
+def program_to_instrument(program:int) ->  str:
+	"""
+	Maps a program number to a specific instrument under 
+	the INSTRUMENTS lookup.
+	TODO: maybe don't always have this table in memory? 
+	Only load it in when needed, and then keep it persistent.
+	"""
+	assert 1 <= program <= 128, "MCC: Bad input."
+	return INSTRUMENTS[program - 1]
+
 
 def open_midi(filepath:str) -> MidiFile:
+	"""
+	Return the MidiFile object given its filename.
+	"""
 	assert ".mid" in filepath, "MCC: Cannot open non-MIDI file."
 	return MidiFile(filepath, clip=True)
 
+
 def get_note_lengths(file_info: list) -> dict:
-    bpm = file_info[2][1]
-    notes = {"whole note": 240 / bpm, "half note": 120 / bpm, "quarter note": 60 / bpm, "eighth note": 30 / bpm,
-             "sixteenth note": 15 / bpm}
-    return notes
+	bpm = file_info[2][1]
+	notes = {"whole note": 240 / bpm, "half note": 120 / bpm, "quarter note": 60 / bpm, "eighth note": 30 / bpm,
+			 "sixteenth note": 15 / bpm}
+	return notes
 """
 currently, this implementation only works assuming the format of the midi files we've seen so far is the usual, ie. the 
 time signature is first, then the key signature, then the tempo is set. This is why if you pass it the list of extracted info
@@ -38,8 +69,6 @@ def extract_midi_info(meta_messages: list) -> list:
 	Input the first track of a MIDI file containing meta messages
 	with key info such as timestamps for tempo change.
 	Return a dictionary of relevant information for a MIDI file.
-
-	TODO: implement this.
 	"""
 	MidiInfo = []
 	for msg in meta_messages:
@@ -77,7 +106,7 @@ def extract_midi_tracks(mid_tracks:list) -> list:
 		# For example, the type of instrument that is playing, or a specific tempo.
 		for msg in track:
 			if msg.type == 'program_change':
-				current_instrument = Instrument.program_to_instrument(msg.program)
+				current_instrument = program_to_instrument(msg.program)
 			# Only work on messages that describe notes.
 			if msg.type == "note_on" or msg.type == "note_off":
 				note = (msg.note, msg.velocity, msg.time, msg.velocity > 0, current_instrument)
@@ -86,10 +115,11 @@ def extract_midi_tracks(mid_tracks:list) -> list:
 			notes_tracks.append(track_notes)
 	return notes_tracks
 
+
 def assign_note (beat: int, ticks_per_beat: int) -> str:
 	"""
-	Input the time(in ticks) that can be found in midi tracks, and ticks per beat
-	convert time to beats for RTTTL format
+	Input the time (in ticks) that can be found in midi tracks, and 
+	ticks per beat convert time to beats for RTTTL format
 	"""
 	beat = beat / ticks_per_beat
 	if beat == 0:
