@@ -121,7 +121,7 @@ def assign_note(beat:int, ticks_per_beat:int) -> str:
 	"""
 	beat = beat / ticks_per_beat
 	if beat == 0:
-		return ""
+		return "0"
 	elif beat >= 3:
 		return "1"
 	elif beat >= 1.5:
@@ -154,6 +154,9 @@ def midi_to_rtttl(midi_tuple_list:list, ticks_per_beat:int) -> str:
 		# note on
 		next_tuple = midi_tuple_list[i + 1]
 		beat_in_note = assign_note(next_tuple[2], ticks_per_beat)
+		if beat_in_note == "0":
+			continue
+
 		if tuple[3] == True:
 			newNote = beat_in_note + MIDI2RTTTL.get(tuple[0]) # time of next tuple + note
 			rtttlList = rtttlList + "," + newNote
