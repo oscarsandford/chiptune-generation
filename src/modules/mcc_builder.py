@@ -33,6 +33,14 @@ def combine_tracks(tracks: list, truncate:bool=True) -> list:
 	return combined
 
 
+def join(*args):
+	"""
+	Do the "+" operation on a undefined number of args of the same type.
+	Useful for concatenating many strings together.
+	"""
+	return args[0] + join(*args[1:]) if len(args) > 1 else args[0]
+
+
 def export_to_wav(track: list, srate: int, name):
 	"""
 	Input a list of track (number list), sampling rate and the name of the file.

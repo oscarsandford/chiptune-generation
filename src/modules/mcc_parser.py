@@ -3,6 +3,10 @@
 
 from mido import MidiFile, tempo2bpm
 
+
+# Mapping of MIDI numeric notes to RTTTL key+octave notes.
+# Opposite mapping from RTTTL2MIDI in mcc_waves module.
+# Based on this: https://en.wikipedia.org/wiki/Piano_key_frequencies#List
 MIDI2RTTTL = {
 	24: 'c1', 25: 'c#1', 26: 'd1', 27: 'd#1', 28: 'e1', 29: 'f1', 30: 'f#1', 31: 'g1', 32: 'g#1', 33: 'a1', 
 	34: 'a#1', 35: 'b1', 36: 'c2', 37: 'c#2', 38: 'd2', 39: 'd#2', 40: 'e2', 41: 'f2', 42: 'f#2', 43: 'g2', 
@@ -37,8 +41,6 @@ def program_to_instrument(program:int) ->  str:
 	"""
 	Maps a program number to a specific instrument under 
 	the INSTRUMENTS lookup.
-	TODO: maybe don't always have this table in memory? 
-	Only load it in when needed, and then keep it persistent.
 	"""
 	assert 1 <= program <= 128, "MCC: Bad input."
 	return INSTRUMENTS[program - 1]
@@ -57,31 +59,28 @@ def get_note_lengths(file_info: list) -> dict:
 	notes = {"whole note": 240 / bpm, "half note": 120 / bpm, "quarter note": 60 / bpm, "eighth note": 30 / bpm,
 			 "sixteenth note": 15 / bpm}
 	return notes
+
 """
 currently, this implementation only works assuming the format of the midi files we've seen so far is the usual, ie. the 
 time signature is first, then the key signature, then the tempo is set. This is why if you pass it the list of extracted info
 from the midi file, the tempo should always be the 2nd entry of the 3rd list in the input
 """
 
-
-def extract_midi_info(meta_messages: list) -> list:
+def extract_midi_info(meta_messages:list) -> dict:
 	"""
 	Input the first track of a MIDI file containing meta messages
 	with key info such as timestamps for tempo change.
 	Return a dictionary of relevant information for a MIDI file.
 	"""
-	MidiInfo = []
+	info = {}
 	for msg in meta_messages:
 		if msg.type == "time_signature":
-			info = (msg.type, msg.numerator, msg.denominator)
-			MidiInfo.append(info)
-		if msg.type == "key_signature":
-			info = (msg.type, msg.key)
-			MidiInfo.append(info)
-		if msg.type == 'set_tempo':
-			info = (msg.type, tempo2bpm(msg.tempo), msg.time)
-			MidiInfo.append(info)
-	return MidiInfo
+			info["time_signature"] = (msg.numerator, msg.denominator)
+		elif msg.type == "key_signature":
+			info["key_signature"] = msg.key
+		elif msg.type == 'set_tempo':
+			info["tempo"] = (tempo2bpm(msg.tempo), msg.time)
+	return info
 
 
 def extract_midi_tracks(mid_tracks:list) -> list:
@@ -97,18 +96,17 @@ def extract_midi_tracks(mid_tracks:list) -> list:
 				duration of a note is the sum of time in between the two nearest messages
 				containing the same note
 			on/off: bool, essentially whether this note is off or not
+			instrument: the instrument playing this note
 		)
 	"""
 	notes_tracks = []
 	for track in mid_tracks:
 		track_notes = []
-		# TODO: It will be worth adding more data to the track.
-		# For example, the type of instrument that is playing, or a specific tempo.
 		for msg in track:
 			if msg.type == 'program_change':
 				current_instrument = program_to_instrument(msg.program)
 			# Only work on messages that describe notes.
-			if msg.type == "note_on" or msg.type == "note_off":
+			elif msg.type == "note_on" or msg.type == "note_off":
 				note = (msg.note, msg.velocity, msg.time, msg.velocity > 0, current_instrument)
 				track_notes.append(note)
 		if len(track_notes) > 0:
@@ -116,38 +114,34 @@ def extract_midi_tracks(mid_tracks:list) -> list:
 	return notes_tracks
 
 
-def assign_note (beat: int, ticks_per_beat: int) -> str:
+def assign_note(beat:int, ticks_per_beat:int) -> str:
 	"""
 	Input the time (in ticks) that can be found in midi tracks, and 
 	ticks per beat convert time to beats for RTTTL format
 	"""
 	beat = beat / ticks_per_beat
 	if beat == 0:
-		return "0"
-
+		return ""
 	elif beat >= 3:
 		return "1"
-
 	elif beat >= 1.5:
 		return "2"
-	
 	elif beat >= 0.75:
 		return "4"
-
 	elif beat >= 0.375:
 		return "8"
-	
 	elif beat >= 0.1875:
 		return "16"
-	
 	else:
 		return "32"
 
 
-def midi_to_rtttl(midi_tuple_list: list, ticks_per_beat: int) -> str:
+def midi_to_rtttl(midi_tuple_list:list, ticks_per_beat:int) -> str:
 	"""
-	Input ONE element of the output of extract_midi_tracks function. i.e. just one list should be the input
-	It return RTTTL string of the midi note list
+	Input ONE element of the output of extract_midi_tracks function. i.e. just one list should be the input.
+	Specify ticks_per_beat of a MidiFile object `mid` as `mid.ticks_per_beat`.
+
+	Returns RTTTL string of the midi note list.
 	"""
 
 	rtttlList = ""

@@ -1,6 +1,10 @@
 # mcc_markov.py
-# Code for working with domain-specific Markov models, using 
-# Python libraries and our own code.
+# Code for working with general-purpose Markov models.
+# Written from scratch, only using numpy.
+# - SimpleMarkov is a more naive, first-order implementation.
+# - KMarkov can model higher-order processes and make predictions 
+# 	adaptively using a reduction algorithm.
+# 
 
 import numpy as np
 
@@ -225,9 +229,9 @@ class KMarkov():
 				self.TP[priors][next] /= csum
 
 
-	def predict(self, samples:int, DEBUG_LVL:int=0) -> list:
+	def predict(self, samples:int, DEBUG_LVL:int=0) -> str:
 		"""
-		Generate a given number of samples from the model.
+		Generate a given number of samples from the model. Returns a comma-separated string of states.
 
 		The set of predictions is initialized through a random choice of priors. 
 		One could allow passing a set of states to initialize predictions on. (TODO)
@@ -290,4 +294,4 @@ class KMarkov():
 
 			preds.append(next)
 		
-		return preds
+		return ",".join(preds)

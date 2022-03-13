@@ -4,7 +4,9 @@
 import numpy as np
 
 
-# Stupid thing.
+# A mapping for RTTTL notes to MIDI notes. 
+# Opposite mapping for MIDI2RTTTL in mcc_parser module.
+# Based on this: https://en.wikipedia.org/wiki/Piano_key_frequencies#List
 RTTTL2MIDI = {'c1': 24, 'c#1': 25, 'd1': 26, 'd#1': 27, 'e1': 28, 'f1': 29, 'f#1': 30, 'g1': 31, 'g#1': 32, 'a1': 33, 'a#1': 34, 'b1': 35, 
 			'c2': 36, 'c#2': 37, 'd2': 38, 'd#2': 39, 'e2': 40, 'f2': 41, 'f#2': 42, 'g2': 43, 'g#2': 44, 'a2': 45, 'a#2': 46, 'b2': 47, 
 			'c3': 48, 'c#3': 49, 'd3': 50, 'd#3': 51, 'e3': 52, 'f3': 53, 'f#3': 54, 'g3': 55, 'g#3': 56, 'a3': 57, 'a#3': 58, 'b3': 59, 
@@ -15,7 +17,7 @@ RTTTL2MIDI = {'c1': 24, 'c#1': 25, 'd1': 26, 'd#1': 27, 'e1': 28, 'f1': 29, 'f#1
 
 def _midi_to_freq(pitch:float) -> float:
 	"""
-	A simple function to change a MIDI note to a frequency.
+	A simple function to change a MIDI pitch to a frequency.
 	"""
 	return 440*(2**((pitch-69)/12.0))
 
@@ -44,11 +46,12 @@ def square_wave(freq:float, dur:float=1.0, sr:float=44100) -> np.array:
 	return 2 * (2*np.floor(freq*t) - np.floor(2*freq*t)) + 1
 
 
-def adsr_envelope(dur:float, props:list=[0.1,0.3,0.5], sr:int=44100) -> np.array:
+def adsr_envelope(duration:float, props:list=[0.1,0.3,0.5], sr:int=44100) -> np.array:
 	"""
 	Creates an ASDR (attack-decay-sustain-release) envelope for a given duration 
 	with a sort of fade-in and fade-out. Customize the ASDR via the props param. 
 	The release time is the remaining duration. 
+
 	For example, if props=[0.1, 0.2, 0.5] and duration=3.0, then
 	 - attack goes from 0-0.3 seconds (+0.3 seconds)
 	 - decay goes from 0.3-0.9 seconds (+0.6 seconds)
@@ -62,14 +65,14 @@ def adsr_envelope(dur:float, props:list=[0.1,0.3,0.5], sr:int=44100) -> np.array
 	assert sum(props) <= 1.0 and all(p > 0 for p in props), "MCC: Each time proportion must be non-negative and sum not over 1.0."
 
 	n_attack = 0
-	t_decay = props[0] * dur
-	t_sustain = t_decay + (props[1]*dur)
-	t_release = t_sustain + (props[2]*dur)
+	t_decay = props[0] * duration
+	t_sustain = t_decay + (props[1]*duration)
+	t_release = t_sustain + (props[2]*duration)
 	
 	n_decay = int(t_decay * sr)
 	n_sustain = int(t_sustain * sr)
 	n_release = int(t_release * sr)
-	n_end = int(dur*sr)
+	n_end = int(duration*sr)
 	
 	ampl_attack = 1.0
 	ampl_sustain = 0.3
@@ -96,19 +99,19 @@ def _split_note(note_st:str) -> tuple:
 	raise Exception(f"MCC: {note_st} was a bad note.")
 		
 
-def notes_to_waveform(notes:list, bpm:float, time_signature:int=4, wave_function=square_wave, do_envl:bool=True) -> np.array:
+def notes_to_waveform(notes:list, bpm:float, time_signature:int=4, octave:int=5, wave_function=square_wave, do_envl:bool=True) -> np.array:
 	"""
-	NEW!
-	A new method for turning a string of notes (based on this spec http://merwin.bespin.org/t4a/specs/nokia_rtttl.txt) 
+	A function for turning a string of RTTTL notes (based on this spec http://merwin.bespin.org/t4a/specs/nokia_rtttl.txt) 
 	into a playable waveform melody. 
 	
 	:param: notes, a list of notes in RTTTL.
 	:param: bpm, defines the tempo of the melody. 
 	:param: time_signature, the time signature defaults to 4/4 time. Set as 3 for 3/4, 5 for 5/4, etc.
+	:param: octave, the octave to default to if no octave is specfied on a note.
 	:param: wave_function, the type of waves to generate for these notes.
 	:param: do_envl, flag to make the note sound smoother with ADSR envelope.
 
-	based on this:
+	This function was writte based on this:
 	https://flothesof.github.io/gameboy-sounds-in-python.html#A-function-that-parses-the-melody-and-generates-a-sound
 	"""
 	measure_len = time_signature * 60 / bpm
@@ -128,8 +131,8 @@ def notes_to_waveform(notes:list, bpm:float, time_signature:int=4, wave_function
 		else:
 			if pitch[-1] in [str(i) for i in range(1,9)]:
 				frequency = _midi_to_freq(RTTTL2MIDI[pitch])
-			else: # Default to 5th octave.
-				frequency = _midi_to_freq(RTTTL2MIDI[pitch+"5"])
+			else:
+				frequency = _midi_to_freq(RTTTL2MIDI[f"{pitch}{octave}"])
 		
 		wave = wave_function(frequency, duration)
 
@@ -142,65 +145,65 @@ def notes_to_waveform(notes:list, bpm:float, time_signature:int=4, wave_function
 
 	return waveform
 	
-"""
-!!!
-The functions below work for a deprecated way to create sound waves from notes of a specific format in a track.
-"""
+# """
+# !!!
+# The functions below work for a deprecated way to create sound waves from notes of a specific format in a track.
+# """
 
-def _add_wave(waves: list, wave: list, idx: int):
-	"""
-	Add a wave to a list of waves, starting at index idx. 
-	If the waves list is smaller, extend the waves list with 0.0's. 
-	This operation is done in-place and does not return a new list.
-	"""
-	if len(waves) < len(wave):
-		waves += [0.]*(len(wave)-len(waves))
-	waves[idx:len(wave)] = wave
+# def _add_wave(waves: list, wave: list, idx: int):
+# 	"""
+# 	Add a wave to a list of waves, starting at index idx. 
+# 	If the waves list is smaller, extend the waves list with 0.0's. 
+# 	This operation is done in-place and does not return a new list.
+# 	"""
+# 	if len(waves) < len(wave):
+# 		waves += [0.]*(len(wave)-len(waves))
+# 	waves[idx:len(wave)] = wave
 
 
-def create_track_wave(track:list, wave_function=square_wave, tempo:int=1000, envl:bool=False) -> list:
-	"""
-	Creates a wave for a given track, with the option to use different wave functions and envelope or not.
+# def create_track_wave(track:list, wave_function=square_wave, tempo:int=1000, envl:bool=False) -> list:
+# 	"""
+# 	Creates a wave for a given track, with the option to use different wave functions and envelope or not.
 
-	`track`
-		A list of notes.
-	`wave_function`
-		A function used to generate a sound wave for each note (the default is a triangle wave).
-	`tempo`
-		A numerical value used when determining the length of the note. TODO: HARDCODED - THIS MUST BE REWORKED.
-	`envl`
-		Whether to apply the default envelope to the wave.
-	"""
-	track_waves = []
-	ptr = 0
-	for i, note in enumerate(track):
-		if note[3]:
-			for n in track[i:]:
-				if n[0] == note[0] and not n[3]:
-					ntime = n[2]
-					break
-		else:
-			ntime = 0
+# 	`track`
+# 		A list of notes.
+# 	`wave_function`
+# 		A function used to generate a sound wave for each note (the default is a triangle wave).
+# 	`tempo`
+# 		A numerical value used when determining the length of the note. TODO: HARDCODED - THIS MUST BE REWORKED.
+# 	`envl`
+# 		Whether to apply the default envelope to the wave.
+# 	"""
+# 	track_waves = []
+# 	ptr = 0
+# 	for i, note in enumerate(track):
+# 		if note[3]:
+# 			for n in track[i:]:
+# 				if n[0] == note[0] and not n[3]:
+# 					ntime = n[2]
+# 					break
+# 		else:
+# 			ntime = 0
 
-		note_wave = wave_function(note[0], dur=ntime/tempo)
-		if envl:
-			envl_wave = adsr_envelope(ntime/tempo)
-			wavelen = min(len(note_wave), len(envl_wave))
-			note_wave = note_wave[:wavelen] * envl_wave[:wavelen]
+# 		note_wave = wave_function(note[0], dur=ntime/tempo)
+# 		if envl:
+# 			envl_wave = adsr_envelope(ntime/tempo)
+# 			wavelen = min(len(note_wave), len(envl_wave))
+# 			note_wave = note_wave[:wavelen] * envl_wave[:wavelen]
 
-		_add_wave(track_waves, note_wave, ptr)
-		ptr += len(note_wave)
+# 		_add_wave(track_waves, note_wave, ptr)
+# 		ptr += len(note_wave)
 	
-	return track_waves
+# 	return track_waves
 
 
-def create_all_track_waves(tracks:list, wave_function=square_wave, tempo:int=1000, envl:bool=False) -> list:
-	"""
-	Input a list of lists. Create wave for all tracks.
-	"""
-	track_waves = []
-	for track in tracks:
-		if len(track) > 0:
-			wave = create_track_wave(track, wave_function, tempo, envl)
-			track_waves.append(wave)
-	return track_waves
+# def create_all_track_waves(tracks:list, wave_function=square_wave, tempo:int=1000, envl:bool=False) -> list:
+# 	"""
+# 	Input a list of lists. Create wave for all tracks.
+# 	"""
+# 	track_waves = []
+# 	for track in tracks:
+# 		if len(track) > 0:
+# 			wave = create_track_wave(track, wave_function, tempo, envl)
+# 			track_waves.append(wave)
+# 	return track_waves
