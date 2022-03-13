@@ -86,7 +86,35 @@ def extract_midi_tracks(mid_tracks:list) -> list:
 			notes_tracks.append(track_notes)
 	return notes_tracks
 
-def midi_to_rtttl(midi_tuple_list: list) -> str:
+def assign_note (beat: int, ticks_per_beat: int) -> str:
+	"""
+	Input the time(in ticks) that can be found in midi tracks, and ticks per beat
+	convert time to beats for RTTTL format
+	"""
+	beat = beat / ticks_per_beat
+	if beat == 0:
+		return "0"
+
+	elif beat >= 3:
+		return "1"
+
+	elif beat >= 1.5:
+		return "2"
+	
+	elif beat >= 0.75:
+		return "4"
+
+	elif beat >= 0.375:
+		return "8"
+	
+	elif beat >= 0.1875:
+		return "16"
+	
+	else:
+		return "32"
+
+
+def midi_to_rtttl(midi_tuple_list: list, ticks_per_beat: int) -> str:
 	"""
 	Input ONE element of the output of extract_midi_tracks function. i.e. just one list should be the input
 	It return RTTTL string of the midi note list
@@ -94,12 +122,23 @@ def midi_to_rtttl(midi_tuple_list: list) -> str:
 
 	rtttlList = ""
 
-	for tuple in midi_tuple_list:
-		rtttl_note = MIDI2RTTTL.get(tuple[0])
-
-		# only adding the RTTTL note to the list if conversion was successful
-		if rtttl_note:
-			rtttlList = rtttlList + "," + rtttl_note
+	for i, tuple in enumerate(midi_tuple_list):
+		# skipping the last element, since there's no next tuple's time
+		if i == len(midi_tuple_list) - 1:
+			break
+		
+		# note on
+		next_tuple = midi_tuple_list[i + 1]
+		beat_in_note = assign_note(next_tuple[2], ticks_per_beat)
+		if tuple[3] == True:
+			newNote = beat_in_note + MIDI2RTTTL.get(tuple[0]) # time of next tuple + note
+			rtttlList = rtttlList + "," + newNote
+		
+		# note off
+		else:
+			newNote = beat_in_note + "p"
+			if beat_in_note != "0":
+				rtttlList = rtttlList + "," + newNote
 	
 	rtttlList = rtttlList[1:]	# removing the first comma
 	return rtttlList
