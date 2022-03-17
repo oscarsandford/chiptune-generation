@@ -42,8 +42,10 @@ def program_to_instrument(program:int) ->  str:
 	Maps a program number to a specific instrument under 
 	the INSTRUMENTS lookup.
 	"""
-	assert 1 <= program <= 128, "MCC: Bad input."
-	return INSTRUMENTS[program - 1]
+	if 1 <= program <= 128:
+		return INSTRUMENTS[program - 1]
+	else:
+		return INSTRUMENTS[0]
 
 
 def open_midi(filepath:str) -> MidiFile:

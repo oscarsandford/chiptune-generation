@@ -21,6 +21,8 @@ def combine_tracks(tracks: list, truncate:bool=True) -> list:
 	"""
 	Input a list of lists (tracks). Combine each track by element-wise adding each list. 
 	Truncate each track so they have the same length. Return a single list of floating point numbers.
+
+	TODO: rewrite to be not bad.
 	"""
 	assert len(tracks) > 0 and all(len(t) > 0 for t in tracks), "MCC: Each track must be non-empty."
 	if truncate:
