@@ -229,9 +229,12 @@ class KMarkov():
 				self.TP[priors][next] /= csum
 
 
-	def predict(self, samples:int, DEBUG_LVL:int=0) -> str:
+	def predict(self, samples:int, priors:str=None, DEBUG_LVL:int=0) -> str:
 		"""
 		Generate a given number of samples from the model. Returns a comma-separated string of states.
+		OPTIONAL: provide a sequence of priors as a comma-separated string. Prediction will start 
+		from the last k states in the priors. Use this to extend the track trained on by just passing 
+		the string you used as a training event to the priors parameter.
 
 		The set of predictions is initialized through a random choice of priors. 
 		One could allow passing a set of states to initialize predictions on. (TODO)
@@ -249,8 +252,13 @@ class KMarkov():
 		If reduction goes to the last prior, randomly chose a sequence of priors that end in the remaining state. 
 		"""
 		assert not self.states is None, "MCC: Cannot predict without model. Remember to fit() first."
-		# Grab a random set of k consecutive states that will definitely have a next state.
-		preds = str(np.random.choice(list(self.TP.keys()))).split(",")
+
+		if priors is None:
+			# Grab a random set of k consecutive states that will definitely have a next state.
+			preds = str(np.random.choice(list(self.TP.keys()))).split(",")
+		else:
+			assert "," in priors, "MCC: Separate priors in string representation with commas."
+			preds = priors.split(",")[-self.k:]
 
 		for i in range(samples):
 			# Only consider the k most recent states visited.
