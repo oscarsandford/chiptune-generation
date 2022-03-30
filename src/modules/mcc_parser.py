@@ -148,7 +148,13 @@ def midi_to_rtttl(midi_tuple_list:list, ticks_per_beat:int) -> str:
 
 	rtttlList = ""
 
+	# Tuple: (note:int, velocity:int, time:int, on/off:bool, current_instrument:str)
 	for i, tuple in enumerate(midi_tuple_list):
+		# Check first MIDI note for offset time from the start. Only add a "rest" if the time value > 0.
+		if i == 0 and tuple[2] > 0:
+			# Insert RTTTL rest with duration based on initial time.
+			rtttlList += "," + assign_note(tuple[2], ticks_per_beat) + "p"
+
 		# skipping the last element, since there's no next tuple's time
 		if i == len(midi_tuple_list) - 1:
 			break
@@ -161,13 +167,12 @@ def midi_to_rtttl(midi_tuple_list:list, ticks_per_beat:int) -> str:
 
 		if tuple[3] == True:
 			newNote = beat_in_note + MIDI2RTTTL.get(tuple[0]) # time of next tuple + note
-			rtttlList = rtttlList + "," + newNote
+			rtttlList += "," + newNote
 		
 		# note off
 		else:
 			newNote = beat_in_note + "p"
 			if beat_in_note != "0":
-				rtttlList = rtttlList + "," + newNote
+				rtttlList += "," + newNote
 	
-	rtttlList = rtttlList[1:]	# removing the first comma
-	return rtttlList
+	return rtttlList[1:]	# removing the first comma
