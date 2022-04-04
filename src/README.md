@@ -4,8 +4,9 @@ Source code for our implementation will be stored here.
 
 ## Overview
 * `/data`: The storage for input music files, including MIDI, MP3, WAV, MusicXML.
-* `/out`: Used as a bin for all types of output files.
+* `/interface` : Code for a simple, non-CLI interface to interact with the MCC functionality.
 * `/modules`: Location for Python module source files.
+* `/out`: Used as a bin for all types of output files.
 
 The idea is to place key driver source code files and documentation at the source root, and distribute everything else as above. This paradigm is likely to evolve as the project progresses.
 

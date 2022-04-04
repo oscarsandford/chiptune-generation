@@ -229,12 +229,12 @@ class KMarkov():
 				self.TP[priors][next] /= csum
 
 
-	def predict(self, samples:int, DEBUG_LVL:int=0) -> str:
+	def predict(self, samples:int, priors:str=None, DEBUG_LVL:int=0) -> str:
 		"""
 		Generate a given number of samples from the model. Returns a comma-separated string of states.
-
-		The set of predictions is initialized through a random choice of priors. 
-		One could allow passing a set of states to initialize predictions on. (TODO)
+		OPTIONAL: provide a sequence of priors as a comma-separated string. Prediction will start 
+		from the last k states in the priors. Use this to extend the track trained on by just passing 
+		the string you used as a training event to the priors parameter.
 		
 		In order to predict a single next state, make it so that the set of priors (or a reducible suffix) can 
 		be found in the TP lookup. 
@@ -249,14 +249,21 @@ class KMarkov():
 		If reduction goes to the last prior, randomly chose a sequence of priors that end in the remaining state. 
 		"""
 		assert not self.states is None, "MCC: Cannot predict without model. Remember to fit() first."
-		# Grab a random set of k consecutive states that will definitely have a next state.
-		preds = str(np.random.choice(list(self.TP.keys()))).split(",")
+
+		if priors is None:
+			# Grab a random set of k consecutive states that will definitely have a next state.
+			preds = str(np.random.choice(list(self.TP.keys()))).split(",")
+		else:
+			assert "," in priors, "MCC: Separate priors in string representation with commas."
+			# Consider k states from the last state so that we can make sure to have a key for 
+			# this sequence in the TP.
+			preds = priors.split(",")[-self.k-1:-1]
 
 		for i in range(samples):
 			# Only consider the k most recent states visited.
 			priors = ",".join(preds[-self.k:])
 			if DEBUG_LVL > 0:
-				print(i, " init priors:", priors)
+				print(i, " init priors:", priors, self.TP.keys())
 
 			while not priors in self.TP:
 				priors_list = priors.split(",")
@@ -275,7 +282,12 @@ class KMarkov():
 				else:
 					last_state = ",".join(priors_list)
 					possible_priors = [k for k in self.TP if k[-len(last_state):] == last_state]
-					priors = str(np.random.choice(possible_priors))
+					# Some songs just can't even. Seems to only be an issue with certain tracks 
+					# in Zgbreve.mid and zeldaund.mid. This is insurance.
+					if len(possible_priors) == 0:
+						priors = str(np.random.choice(list(self.TP.keys())))
+					else:
+						priors = str(np.random.choice(possible_priors))
 
 				if DEBUG_LVL > 0:
 					print("  reduced priors:", priors)

@@ -5,32 +5,15 @@
 import numpy as np
 from scipy.io.wavfile import write
 
-def _min_len_nonzero(lili: list) -> int:
-	"""
-	Input a list of lists.
-	Return the length of the track with the minimum non-zero length.
-	"""
-	minlen = np.inf
-	for li in lili:
-		if len(li) < minlen:
-			minlen = len(li)
-	return minlen
 
-
-def combine_tracks(tracks: list, truncate:bool=True) -> list:
+def combine_tracks(tracks: list) -> np.array:
 	"""
-	Input a list of lists (tracks). Combine each track by element-wise adding each list. 
-	Truncate each track so they have the same length. Return a single list of floating point numbers.
-
-	TODO: rewrite to be not bad.
+	Takes a list of tracks, each track in its waveform. Add them elementwise.
 	"""
-	assert len(tracks) > 0 and all(len(t) > 0 for t in tracks), "MCC: Each track must be non-empty."
-	if truncate:
-		l = _min_len_nonzero(tracks)
-		tracks = [t[:l] for t in tracks]
-	
-	combined = np.zeros(len(tracks[0]))
+	maxlen = max(list(map(len, tracks)))
+	combined = np.zeros(maxlen)
 	for t in tracks:
+		t = np.pad(t, (0,maxlen-t.shape[0]))
 		combined += t
 	return combined
 

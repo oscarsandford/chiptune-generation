@@ -2,6 +2,7 @@
 # Functions to create and manipulate waves, envelopes, and frequencies.
 
 import numpy as np
+from scipy import signal
 
 
 # A mapping for RTTTL notes to MIDI notes. 
@@ -44,6 +45,17 @@ def square_wave(freq:float, dur:float=1.0, sr:float=44100) -> np.array:
 	# f = _midi_to_freq(pitch)
 	t = np.arange(0, dur, 1.0/sr)
 	return 2 * (2*np.floor(freq*t) - np.floor(2*freq*t)) + 1
+
+
+def sawtooth_wave(freq:float, dur:float=1.0, sr:float=44100) -> np.array:
+	"""
+	Sawtooth wave seem to combine triangle and square waves, 
+	with a leading slope, and the abrubt drop of a square wave.
+	https://en.wikipedia.org/wiki/Sawtooth_wave
+	Shoutout to scipy! :D
+	"""
+	t = np.arange(0, dur, 1.0/sr)
+	return signal.sawtooth(2 * freq * np.pi * t)
 
 
 def adsr_envelope(duration:float, props:list=[0.1,0.3,0.5], sr:int=44100) -> np.array:
@@ -95,9 +107,9 @@ def _split_note(note_st:str) -> tuple:
 	for i, c in enumerate(note_st):
 		if c in "abcdefgp":
 			d, p = note_st[:i], note_st[i:]
-			return 1/4 if len(d) == 0 else 1/int(d), p
+			return (1/4, p) if len(d) == 0 else (1/int(d), p)
 	raise Exception(f"MCC: {note_st} was a bad note.")
-		
+
 
 def notes_to_waveform(notes:list, bpm:float, time_signature:int=4, octave:int=5, wave_function=square_wave, do_envl:bool=True) -> np.array:
 	"""
@@ -134,6 +146,9 @@ def notes_to_waveform(notes:list, bpm:float, time_signature:int=4, octave:int=5,
 			else:
 				frequency = _midi_to_freq(RTTTL2MIDI[f"{pitch}{octave}"])
 		
+		# TODO (opt): cache or record waveforms of RTTTL notes already converted 
+		# to waveforms so that we don't need to run this expensive function 
+		# a lot - the result should make overall computation faster.
 		wave = wave_function(frequency, duration)
 
 		if do_envl:
@@ -144,66 +159,3 @@ def notes_to_waveform(notes:list, bpm:float, time_signature:int=4, octave:int=5,
 		waveform = np.hstack((waveform, wave))
 
 	return waveform
-	
-# """
-# !!!
-# The functions below work for a deprecated way to create sound waves from notes of a specific format in a track.
-# """
-
-# def _add_wave(waves: list, wave: list, idx: int):
-# 	"""
-# 	Add a wave to a list of waves, starting at index idx. 
-# 	If the waves list is smaller, extend the waves list with 0.0's. 
-# 	This operation is done in-place and does not return a new list.
-# 	"""
-# 	if len(waves) < len(wave):
-# 		waves += [0.]*(len(wave)-len(waves))
-# 	waves[idx:len(wave)] = wave
-
-
-# def create_track_wave(track:list, wave_function=square_wave, tempo:int=1000, envl:bool=False) -> list:
-# 	"""
-# 	Creates a wave for a given track, with the option to use different wave functions and envelope or not.
-
-# 	`track`
-# 		A list of notes.
-# 	`wave_function`
-# 		A function used to generate a sound wave for each note (the default is a triangle wave).
-# 	`tempo`
-# 		A numerical value used when determining the length of the note. TODO: HARDCODED - THIS MUST BE REWORKED.
-# 	`envl`
-# 		Whether to apply the default envelope to the wave.
-# 	"""
-# 	track_waves = []
-# 	ptr = 0
-# 	for i, note in enumerate(track):
-# 		if note[3]:
-# 			for n in track[i:]:
-# 				if n[0] == note[0] and not n[3]:
-# 					ntime = n[2]
-# 					break
-# 		else:
-# 			ntime = 0
-
-# 		note_wave = wave_function(note[0], dur=ntime/tempo)
-# 		if envl:
-# 			envl_wave = adsr_envelope(ntime/tempo)
-# 			wavelen = min(len(note_wave), len(envl_wave))
-# 			note_wave = note_wave[:wavelen] * envl_wave[:wavelen]
-
-# 		_add_wave(track_waves, note_wave, ptr)
-# 		ptr += len(note_wave)
-	
-# 	return track_waves
-
-
-# def create_all_track_waves(tracks:list, wave_function=square_wave, tempo:int=1000, envl:bool=False) -> list:
-# 	"""
-# 	Input a list of lists. Create wave for all tracks.
-# 	"""
-# 	track_waves = []
-# 	for track in tracks:
-# 		if len(track) > 0:
-# 			wave = create_track_wave(track, wave_function, tempo, envl)
-# 			track_waves.append(wave)
-# 	return track_waves
