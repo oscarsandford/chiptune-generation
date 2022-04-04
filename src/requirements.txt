@@ -4,3 +4,6 @@ ipython
 notebook
 mido
 scipy
+vlc
+pafy
+PySimpleGUI
