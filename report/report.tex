@@ -27,7 +27,8 @@
 \begin{abstract}
 Music generation is a well-studied field. Previous attempts at music generation have succeeded in replicating training tracks using various methods involving complex 
 time inference models. In this paper we show that simple, but appropriately designed, first and $k$-order Markov models are a sufficient enough machinery to both 
-replicate and generate classic 8-bit video game music.\footnote{This abstract will be expounded in time, pending study completion and results organized.}
+replicate and generate classic 8-bit video game music. We document our initial approach and final approach, highlighting the successes and difficulties faced in 
+solving this problem. Our implementation is presented as an extensible open source project.
 \end{abstract}
 
 \section{Introduction}
@@ -39,7 +40,7 @@ Later, we will present techniques for designing generative Markov models to exte
 \section{Background}
 \subsection{Chiptunes}
 Chiptunes, also called 8-bit music, originated in the 1980s and the 1990s, when hardware limitations for video game devices allowed only simple waveforms such as 
-square, triangle, and saw waves \cite{pop_chiptunes}.  As a result, the necessary waveforms can be composed relatively easy in a computer. 
+square, triangle, and saw waves \cite{pop_chiptunes}.  As a result, the necessary waveforms can be created relatively easily on a computer. 
 
 Some examples of chiptunes come from various classic video games, including Super Mario Brothers \cite{kondo_2009}, Undertale \cite{fox_2017} and 
 Legend of Zelda \cite{nakatsuka_2009}.
@@ -62,13 +63,23 @@ Markov chains).
 \end{align*}
 
 The variable $k$ reflects what is called the \textbf{order} of the Markov process. First-order Markov processes have the current state depend \emph{only} on the previous 
-state, making transitions completely independent from state before the one directly before the curren state \cite{russell_norvig_2022}.
+state, making transitions completely independent from states prior to the previous state \cite{russell_norvig_2022}.
 
-Any given set of $k$ states can have an arbitrary number of possible next states, each assigned its own transition probability. The sum of the transition probabilities 
-for each option must sum to 1 \cite{markov_construct}. 
+Every state in a set of $k$ states can have an arbitrary number of possible next states, each assigned its own transition probability. The sum of probabilities for each 
+possible next state from a given state must be 1. \cite{markov_construct}. 
 
-Markov chains are generative models, consisting of a set of states of size $N$. First-order models use a transition matrix of size $N\times N$ to store transition 
-probabilities, but transition matrices for higher-order (i.e. $k>1$) processes may be larger.
+Markov chains are generative models, consisting of a set of states $S$ of size $N$. First-order models use a transition matrix of size $N\times N$ to store transition 
+probabilities, but transition matrices for higher-order (i.e. $k>1$) processes may be larger. The following definition for a $N\times N$ transition matrix $T$ can be read as 
+"$T_{ij}$ is the probability of a transition from state $i$ to state $j$". 
+
+\begin{align*}
+  T_{ij} = P(X_t = j | X_{t-1} = i)
+\end{align*}
+
+The rows of $T$ must sum to 1. 
+\begin{align*}
+  \sum_{j} T_{ij} = \sum_{j} P(X_t = j | X_{t-1} = i) = 1 && \forall i \in S
+\end{align*}
 
 Hidden Markov models incorporate "hidden" states. Consider an unstable coin that has two states: fair (50-50) or biased (90\% tails) \cite{hmms}. One cannot necessarily 
 discern the coin's state simply from appearance, but we can infer the state through observations "emitted" by the hidden state. This variation on the Markov model is very 
@@ -90,7 +101,7 @@ Shapiro and Huber's approach to music generation simply uses Markov chains, no h
 objects with attributes such as pitch, octave, and duration. Their results show that human-composed pieces can be closely replicated using the simpler Markov chains. 
 Further, they have attached their implementation in their paper. We will consider this work when constructing our own implementation.
 
-Corrêa and Jungling suggest using Markov chains of different orders to predict classical music. By using stochastic models to analyze different classcal songs and styles,
+Corrêa and Jungling suggest using Markov chains of different orders to predict classical music. By using stochastic models to analyze different classical songs and styles,
 the computer can even capture subtle and intuitive features such as style of the composer. Although this paper focuses on classical music and its prediction, the authors 
 stress that its application to other music genres should be straightforward \cite{correa_jungling_small_2020}. 
 The only requirement is a MIDI file with a good quality, as it should be used for Markov chains that can properly estimate the music's pattern.
@@ -102,8 +113,9 @@ compositions. Additionally, successful approaches to melody extraction from MIDI
 music our models will generate. MusicXML is a standard file format for storing sheet music, just as MP3 is for recordings \cite{musicxml_2022}. Both are commonly used 
 standards, and after experimenting with MusicXML for input data, we decided to use MIDI instead.
 
-We decided to map MIDI to RTTTL (RingTone Text Transfer Language) notes. RTTTL is format used to specify ringtones for Nokia phones, and is composed of a comma-separated 
-string of notes of a given format \cite{rtttl_spec}. RTTTL is perfect for this study because notes (states) come one after another, in a sequence.
+We decided to map MIDI to RTTTL (RingTone Text Transfer Language) notes. RTTTL is a format used to specify ringtones for Nokia phones, and is composed of a comma-separated 
+string of notes of a given format \cite{rtttl_spec} and maps quite easily to MIDI notes. For example \texttt{8e6} would be an eighth note of pitch E in the 6th octave, 
+with \texttt{e6} translating to MIDI note 88. RTTTL is perfect for this study because notes (states) come one after another, in a sequence.
 
 \section{Initial Approach}
 After considering the differences between HMMs and simpler Markov models, we decided to design our generator as a $k$-order Markov process without hidden states, 
@@ -285,7 +297,7 @@ to play the generated music without a problem.
 \section{Conclusion} 
 It would be great to make our program more robust and able to handle a larger variety of songs, such that difficult MIDI message types are not impossible to extract
 data from. This way we would be able to handle more dynamic songs and not be so limited in our choices. Our implementation will be maintained as an open source 
-project \footnote{https://github.com/oscarsandford/chiptune-generation} in order to expand its functionality and improve its user interface. The following is a non-exhaustive 
+project\footnote{https://github.com/oscarsandford/chiptune-generation} in order to expand its functionality and improve its user interface. The following is a non-exhaustive 
 list of planned features:
 \begin{itemize}
   \item \textbf{Enhanced GUI}: Make the GUI more original and aesthetically pleasing, additional features to allow high-fidelity HCI with API.
