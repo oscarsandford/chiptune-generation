@@ -13,6 +13,8 @@ def combine_tracks(tracks: list) -> np.array:
 	maxlen = max(list(map(len, tracks)))
 	combined = np.zeros(maxlen)
 	for t in tracks:
+		if type(t) is list:
+			t = np.array(t)
 		t = np.pad(t, (0,maxlen-t.shape[0]))
 		combined += t
 	return combined
