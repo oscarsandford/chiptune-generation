@@ -243,12 +243,36 @@ The followings are our scenarios for possible outcomes:
 \section{Evaluation}
 $SimpleMarkov$ chain can process extending process very quickly. However, often the quality of the generated music was not optimal. This is because $SimpleMarkov$ is limited to 
 modelling the one-state transition of notes, and does not capture the melody as a result. 
-Meanwhile, the $KMarkov$ chain method with high $k$ value is slower than $SimpleMarkov$ chain method, it generates music that is closer to the input tracks it had modelled, 
-resulting in higher quality music with tunable variation. We have found out that even the second order $KMarkov$ chain generates a significantly better music than the first order $KMarkov$ chain. 
-We also found that the quality of the extented music sometimes depends on the specific MIDI file we chose to use.
-For example, when we use \texttt{d1trans.mid} as the input, the generated music was very off-sync. But tracks such as \texttt{takeshi.mid} or \texttt{Smbtheme.mid} would produce music that sound more 
-natural and enjoyable. Based on our testing, K=3 Markov seems to be a good balance between accurracy of generation, while not being extremely time intensive.
+Meanwhile, the $KMarkov$ chain method with high $k$ value is slower than $SimpleMarkov$ chain method, but generates music that is closer to the input tracks it had modelled, 
+resulting in higher quality music with tunable variation. We have found out that even the second order $KMarkov$ chain generates a significantly better music than the first 
+order $KMarkov$ chain. We also found that the quality of the extented music sometimes depends on the specific MIDI file we chose to use.
+For example, when we use \texttt{d1trans.mid} as the input, the generated music was very off-sync. But tracks such as \texttt{takeshi.mid} or \texttt{Smbtheme.mid} would 
+produce music that sound more natural and enjoyable. Based on our testing, $k=3$ Markov seems to be a good balance of generating music that is derivative enough from the 
+original as well as not unpleasantly random, while not being extremely time intensive.
 
+Figure \ref{fig:stats} captures basic performance statistics for the average fit time (time to train), prediction time (time to generate notes), and 
+generation time (time to convert notes to waveforms). The plots on the right hand side measure the effect of the $k$ value in $KMarkov$ with a fixed number of samples at 25. 
+The $k$-value is incremented by 3 from $k=1$ to $k=100$. The plots on the left hand side measure the effect of the number of samples with a fixed $k=5$. The number of samples 
+is incremented by 10 from 10 up to 500 samples. Recall that the number of samples is the number of MIDI notes that the $KMarkov$ model will generate. Computation time for 
+each of these tasks is averaged across all of the songs in our data library (10 at the time of this writing, and as reflected in the plot).
+
+\begin{figure} 
+\includegraphics[width=230pt]{figs/stats.png} 
+\caption{\small \sl Performance statistics relative to $k$ and the number of samples.\label{fig:stats}} 
+\end{figure}
+
+Fit time is naturally constant, independent of $k$ or the number of samples. Prediction time appears to be relatively sensitive to the $k$-value, and, as expected, linear 
+with respect to the number of samples. Wave generation is more or less linear with respect to $k$-value. However, it appears that the number of samples begins to have a 
+sharper and sharper impact on waveform construction time as the number increases.
+
+\subsection{The RTTTL Tradeoff}
+While the RTTTL string format is easy to work with due to its simplicity, that also comes at the cost of precision - there is no free lunch. We found that the current method 
+we used for generating the appropriate rest betweeen notes is not flawless. The assign-note function in mcc-parser is responsible for returning the appropriate note lengths 
+and rest lengths for RTTTL notes. However it only returns discrete values, as that is what is required of RTTTL. What this means is that if the result is at the upper end of a 
+range, it gets set to the lower value. This can cause the wrong values to be set for notes and rests, which throws off the synchronization of the tracks when combining them. 
+In the future, fixing the note length creation would cause generated music to sound more like the original, and be more in sync.
+
+\subsection{GUI Development}
 For demonstration and usability purposes, we have implemented a GUI as well. It is a simple media player based on Israel Dryer's Media player project. We previously tried 
 to implement a GUI using TKinter and Pygame. However, the generated WAV file was not playable. After extensive research, we found out that the main problem was the format 
 of the WAV file. We used scipy to convert the extended music data to WAV file, and while scipy saves the WAV file as int8 format,
@@ -256,12 +280,6 @@ Pygame's media player requires int16 (or higher) format in order to play a WAV f
 It is a simple, open source media player that uses TKinter and VLC. The author was very open to modification and extension of the project, especially for educational purposes.
 We added a function and button where the user can upload MIDI file and execute the extension process. VLC was a lot more flexible in terms of file format and we were able 
 to play the generated music without a problem.
-
-While the RTTTL string format is easy to work with due to its simplicity, that also comes at the cost of precision - there is no free lunch. We found that the current method 
-we used for generating the appropriate rest betweeen notes is not flawless. The assign-note function in mcc-parser is responsible for returning the appropriate note lengths 
-and rest lengths for RTTTL notes. However it only returns discrete values, as that is what is required of RTTTL. What this means is that if the result is at the upper end of a 
-range, it gets set to the lower value. This can cause the wrong values to be set for notes and rests, which throws off the synchronization of the tracks when combining them. 
-In the future, fixing the note length creation would cause generated music to sound more like the original, and be more in sync.
 
 % Promises of extensibility.
 \section{Conclusion} 
@@ -275,7 +293,8 @@ list of planned features:
   \item \textbf{Note-waveform mappings}: Use existing MIDI instrument labels to map notes to different types of waveforms.
   \item \textbf{Make mcc-parser more robust}: Ensure program can handle more complex MIDI message types without failure.
   \item \textbf{Make waveform generation more efficient}: Use caching and explore other methods to reduce computation time in generation waves.
-  \item \textbf{Explore methods for quantitative evaluation}: We're going to do that.
+  \item \textbf{Explore methods for quantitative evaluation}: Experiment with cross-similarity matrices as a way to evaluate replication accuracy instead of only measuring 
+  generation quality through qualitative analysis. 
 \end{itemize}
 Overall, we were able to learn a lot about the chiptune music genre and different ways to extend it. As this project is an open sourced project, we would like to encourage
 anyone who has passion in chiptune music or music extension using Markov chains to participate and expand the horizon of this project.
