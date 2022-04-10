@@ -8,6 +8,8 @@ import pafy
 import PySimpleGUI as sg
 from sys import platform as PLATFORM
 from os import listdir
+import sys
+sys.path.insert(0, '..')
 from modules import mcc_parser, mcc_markov, mcc_waves, mcc_builder
 
 PATH = './Assets/'
