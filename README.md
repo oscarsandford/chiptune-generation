@@ -1,4 +1,4 @@
-# Chiptune Track Extension and Generation using Markov chains
+# Chiptune Extension and Generation using Markov Chains
 
 ## Background
 This course project, completed in Spring 2022, surveyed and implemented chiptune/8-bit track extension and generation using Markov chain techniques. Starting in April 2022, this project moved towards open source development in order to refine its various components.
